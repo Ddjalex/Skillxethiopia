@@ -90,10 +90,16 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: tru
 export const insertAccessGrantSchema = createInsertSchema(accessGrants).omit({ id: true, createdAt: true });
 
 export type User = typeof users.$inferSelect;
-export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertUser = { name: string; email: string; passwordHash: string; role?: string };
 export type Category = typeof categories.$inferSelect;
+export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Course = typeof courses.$inferSelect;
+export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Season = typeof seasons.$inferSelect;
+export type InsertSeason = z.infer<typeof insertSeasonSchema>;
 export type Episode = typeof episodes.$inferSelect;
+export type InsertEpisode = z.infer<typeof insertEpisodeSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type AccessGrant = typeof accessGrants.$inferSelect;
+export type InsertAccessGrant = z.infer<typeof insertAccessGrantSchema>;
