@@ -14,6 +14,7 @@ import CourseDetail from "@/pages/course-detail";
 import Dashboard from "@/pages/dashboard";
 import DashboardCourse from "@/pages/dashboard-course";
 import EpisodePlayer from "@/pages/episode-player";
+import AdminDashboard from "@/pages/admin-dashboard";
 
 function Router() {
   return (
@@ -28,7 +29,8 @@ function Router() {
       <ProtectedRoute path="/dashboard/course/:id" component={DashboardCourse} />
       <ProtectedRoute path="/dashboard/course/:courseId/episode/:episodeId" component={EpisodePlayer} />
       
-      {/* TODO: Admin Routes would go here with adminOnly=true prop */}
+      {/* Admin Routes */}
+      <ProtectedRoute path="/admin" component={AdminDashboard} adminOnly />
       
       <Route component={NotFound} />
     </Switch>
