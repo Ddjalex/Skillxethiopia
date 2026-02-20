@@ -1,0 +1,299 @@
+Build a modern, attractive course learning platform similar to Udemy using Node.js (latest LTS) with a clean UI, fast performance, and secure payments/content access.
+
+1) Tech Stack (required)
+
+Backend: Node.js + NestJS (preferred) or Express (if faster), TypeScript
+
+Database: PostgreSQL using Prisma ORM
+
+Auth: Email/password + JWT (access + refresh) + bcrypt
+
+Frontend: Next.js (App Router) + TypeScript + TailwindCSS (modern responsive UI)
+
+UI: clean landing page, cards, filters, dark mode optional
+
+Deployment-ready: works on cPanel/Node hosting (build scripts + environment variables)
+
+2) User Roles
+
+Visitor (not logged in): can browse home page highlights, course previews, categories
+
+User (logged in): can view purchased content, browse categories, buy season/episode
+
+Admin: controls everything from /admin route (protected)
+
+3) Core Website Pages
+Public pages
+
+/ Home page
+
+hero section + featured courses + trending categories
+
+top-right: Login / Register button
+
+show course highlights (title, instructor, rating, price, short description)
+
+/courses Browse all courses
+
+filters: category, price (free/paid), rating, search
+
+/course/[slug] Course detail
+
+show course info + instructor + what you’ll learn
+
+show seasons list and episodes list but locked if not purchased
+
+show purchase options: “Buy Season” and “Buy Episode”
+
+Auth
+
+/login, /register, /logout
+
+basic email verification optional (if time)
+
+User dashboard
+
+/dashboard
+
+purchased courses list
+
+/dashboard/course/[id]
+
+show seasons/episodes unlocked for this user
+
+locked episodes show “Buy to unlock”
+
+4) Course Structure (very important)
+
+Courses are organized as:
+
+Category
+
+Course
+
+Season
+
+Episode
+
+Each Episode has:
+
+title, duration, description
+
+external video provider URL (ex: Vimeo secure link or embed id)
+
+preview flag (admin can set some episodes as free preview)
+
+5) Video Security Requirement
+
+Videos are hosted externally (ex: Vimeo).
+
+In the platform:
+
+Users can only watch if purchased (season or that episode).
+
+Use Vimeo embed in a secure player component.
+
+Do NOT store video files on this server.
+
+Store only videoProvider and videoIdOrUrl.
+
+Add backend authorization so /api/episodes/:id/stream returns the embed info ONLY for authorized users.
+
+6) Payments (required)
+
+Implement paywall with pay per season OR per episode:
+
+A user can purchase:
+
+Entire Season (unlocks all episodes in that season)
+
+A single Episode (unlocks only that episode)
+
+Use a payment provider integration that is easy to swap:
+
+Create a PaymentService abstraction
+
+Provide a “mock payment” mode for development
+
+Database tables must track:
+
+purchases, payment status, amount, currency, provider, transaction reference
+
+After payment success, mark purchase as active and unlock content.
+
+7) Admin System (required)
+
+Create /admin route (admin only) with:
+
+Admin login (same auth system, but role = admin)
+
+Admin dashboard features:
+
+CRUD Categories
+
+CRUD Courses
+
+title, slug, description, thumbnail image upload, instructor name, price strategy
+
+CRUD Seasons
+
+attach to course, order number, title
+
+CRUD Episodes
+
+attach to season, order number, title, description, duration
+
+set isPreview true/false
+
+set videoProvider (VIMEO) and videoIdOrUrl
+
+Pricing controls:
+
+set season price
+
+set episode price
+
+User management:
+
+list users
+
+assign admin role
+
+Purchases management:
+
+view transactions
+
+manually grant/revoke access (admin override)
+
+8) Database Schema (must implement)
+
+Use Prisma with Postgres. Entities:
+
+User: id, name, email, passwordHash, role (USER|ADMIN), createdAt
+
+Category: id, name, slug
+
+Course: id, categoryId, title, slug, description, thumbnailUrl, instructorName, createdAt
+
+Season: id, courseId, title, seasonNumber, price, createdAt
+
+Episode: id, seasonId, title, episodeNumber, description, durationSec, isPreview, price, videoProvider, videoRef, createdAt
+
+Purchase:
+
+id, userId, itemType (SEASON|EPISODE), itemId, amount, currency,
+
+provider, status (PENDING|PAID|FAILED|REFUNDED),
+
+transactionRef, createdAt
+
+AccessGrant:
+
+id, userId, itemType, itemId, grantedBy (SYSTEM|ADMIN), createdAt
+(AccessGrant is what the app checks to allow watching)
+
+9) API Routes (required)
+
+REST or tRPC is fine, but must include:
+
+Auth: register, login, refresh, me
+
+Public: list categories, list courses, course detail with seasons/episodes (episodes locked info)
+
+Protected:
+
+purchase start, purchase confirm (mock mode OK)
+
+user purchases list
+
+episode stream/embed info authorized endpoint
+
+Admin:
+
+CRUD categories, courses, seasons, episodes
+
+set pricing
+
+user list + role update
+
+grant/revoke access
+
+10) UI/UX Requirements (attractive like Udemy)
+
+Responsive layout (mobile + desktop)
+
+Use modern cards, clean typography, spacing
+
+Home page:
+
+featured course slider/grid
+
+category chips
+
+testimonials section optional
+
+Course detail:
+
+“Buy Season” and “Buy Episode” buttons clear
+
+locked episodes show lock icon
+
+Video page:
+
+player at top
+
+episodes list sidebar
+
+show progress indicator (optional)
+
+11) Security + Best Practices
+
+Password hashing (bcrypt)
+
+JWT + refresh token
+
+Rate limit login endpoint
+
+Validate inputs with Zod/class-validator
+
+Protect admin routes with role guard
+
+Never expose videoRef directly unless authorized
+
+Environment variables:
+
+DATABASE_URL, JWT_SECRET, JWT_REFRESH_SECRET, APP_URL, PAYMENT_PROVIDER_KEYS
+
+12) Deliverables from the Agent
+
+Full working code in the Replit project
+
+Clear folder structure:
+
+/apps/web (Next.js frontend)
+
+/apps/api (NestJS backend)
+
+/packages/shared (types/validators)
+
+Prisma schema + migration
+
+Seed script with sample categories/courses/seasons/episodes
+
+Instructions:
+
+how to run dev
+
+how to build production
+
+how to deploy to Node hosting/cPanel
+
+13) Extra (nice to have)
+
+Search bar with debounce
+
+Course ratings (optional)
+
+Coupon codes (optional)
+
+Multi-language support later (don’t implement now unless easy)
