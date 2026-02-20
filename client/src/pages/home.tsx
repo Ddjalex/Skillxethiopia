@@ -4,7 +4,7 @@ import { useCourses, useCategories } from "@/hooks/use-courses";
 import { CourseCard } from "@/components/course-card";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, Zap, Globe, Loader2 } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Globe, Loader2, MonitorPlay } from "lucide-react";
 
 export default function Home() {
   const { data: courses, isLoading: coursesLoading } = useCourses();

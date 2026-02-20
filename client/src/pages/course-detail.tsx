@@ -165,9 +165,11 @@ export default function CourseDetailPage() {
 
                         <div className="flex items-center gap-2">
                           {ep.isPreview ? (
-                            <Button size="sm" variant="ghost" className="text-primary hover:text-primary/80">
-                              <Play className="w-4 h-4 mr-2" /> Watch Preview
-                            </Button>
+                            <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
+                              <Button size="sm" variant="ghost" className="text-primary hover:text-primary/80">
+                                <Play className="w-4 h-4 mr-2" /> Watch Preview
+                              </Button>
+                            </Link>
                           ) : (
                             <Button 
                               size="sm" 
