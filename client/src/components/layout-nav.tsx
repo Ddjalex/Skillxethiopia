@@ -32,8 +32,12 @@ export function Navbar() {
       <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-xl md:text-2xl text-primary tracking-tight">
-          <MonitorPlay className="h-6 w-6 md:h-8 md:w-8" />
-          <span>CourseFlix</span>
+          <div className="flex items-center justify-center h-8 w-8 md:h-10 md:w-10 rounded-lg bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+            <span className="text-xl md:text-2xl font-black">SX</span>
+          </div>
+          <span className="font-extrabold tracking-tighter" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Skillx<span className="text-muted-foreground/80">ethiopia</span>
+          </span>
         </Link>
 
         {/* Desktop Search */}
