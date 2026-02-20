@@ -5,7 +5,7 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/components/ui/sidebar";
+} from "@/components/ui/card";
 import { 
   Table, 
   TableBody, 
