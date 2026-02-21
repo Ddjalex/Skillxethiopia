@@ -17,7 +17,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, Users, BookOpen, Layers, Plus, 
-  Video, Image as ImageIcon, FileText, Settings 
+  Video, Image as ImageIcon, FileText, Settings,
+  Pencil, Trash2
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -279,6 +280,12 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
                     <div className="flex gap-2">
                       <AddSeasonDialog courseId={course.id} />
                       <AddEpisodeDialog courseId={course.id} />
+                      <EditCourseDialog course={course} categories={categories} />
+                      <DeleteConfirmDialog 
+                        type="course" 
+                        id={course.id} 
+                        onDelete={() => queryClient.invalidateQueries({ queryKey: [api.public.courses.path] })} 
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -288,6 +295,126 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function DeleteConfirmDialog({ type, id, onDelete }: { type: "course" | "season" | "episode" | "category", id: number, onDelete: () => void }) {
+  const { toast } = useToast();
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      let path = "";
+      if (type === "course") path = buildUrl(api.admin.deleteCourse.path, { id });
+      if (type === "season") path = buildUrl(api.admin.deleteSeason.path, { id });
+      if (type === "episode") path = buildUrl(api.admin.deleteEpisode.path, { id });
+      if (type === "category") path = buildUrl(api.admin.deleteCategory.path, { id });
+      
+      const res = await apiRequest("DELETE", path);
+      if (!res.ok) throw new Error("Delete failed");
+    },
+    onSuccess: () => {
+      onDelete();
+      toast({ title: "Deleted", description: `The ${type} has been removed.` });
+    }
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Are you sure?</DialogTitle>
+          <DialogDescription>
+            This action cannot be undone. This will permanently delete the {type}.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={(e: any) => e.target.closest("button").click()}>Cancel</Button>
+          <Button variant="destructive" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+            {deleteMutation.isPending ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditCourseDialog({ course, categories }: { course: any, categories: any[] }) {
+  const { toast } = useToast();
+  const updateCourse = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", buildUrl(api.admin.updateCourse.path, { id: course.id }), data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.public.courses.path] });
+      toast({ title: "Updated", description: "Course updated successfully" });
+    }
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertCourseSchema),
+    defaultValues: {
+      title: course.title,
+      slug: course.slug,
+      description: course.description,
+      instructorName: course.instructorName,
+      categoryId: course.categoryId,
+      thumbnailUrl: course.thumbnailUrl || "",
+      priceStrategy: course.priceStrategy || "PAID"
+    }
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Course</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data))} className="grid grid-cols-2 gap-4 py-4">
+          <div className="space-y-2">
+            <Label>Title</Label>
+            <Input {...form.register("title")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Slug</Label>
+            <Input {...form.register("slug")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Instructor Name</Label>
+            <Input {...form.register("instructorName")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Category</Label>
+            <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))} defaultValue={course.categoryId.toString()}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2 col-span-2">
+            <Label>Description</Label>
+            <Textarea {...form.register("description")} />
+          </div>
+          <div className="space-y-2 col-span-2">
+            <Label>Thumbnail URL</Label>
+            <Input {...form.register("thumbnailUrl")} />
+          </div>
+          <DialogFooter className="col-span-2">
+            <Button type="submit" disabled={updateCourse.isPending}>
+              {updateCourse.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -398,6 +525,13 @@ function CategoryManagement({ categories }: { categories: any[] }) {
                 <TableRow key={cat.id}>
                   <TableCell className="font-medium">{cat.name}</TableCell>
                   <TableCell>{cat.slug}</TableCell>
+                  <TableCell>
+                    <DeleteConfirmDialog 
+                      type="category" 
+                      id={cat.id} 
+                      onDelete={() => queryClient.invalidateQueries({ queryKey: [api.public.categories.path] })} 
+                    />
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

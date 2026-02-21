@@ -242,7 +242,6 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  // Admin CRUD mappings
   app.post(api.admin.createCategory.path, requireAdmin, async (req, res) => {
     const created = await storage.createCategory(req.body);
     res.status(201).json(created);
@@ -258,6 +257,39 @@ export async function registerRoutes(
   app.post(api.admin.createEpisode.path, requireAdmin, async (req, res) => {
     const created = await storage.createEpisode(req.body);
     res.status(201).json(created);
+  });
+
+  app.put(api.admin.updateCategory.path, requireAdmin, async (req, res) => {
+    const updated = await storage.updateCategory(Number(req.params.id), req.body);
+    res.json(updated);
+  });
+  app.delete(api.admin.deleteCategory.path, requireAdmin, async (req, res) => {
+    await storage.deleteCategory(Number(req.params.id));
+    res.status(204).end();
+  });
+  app.put(api.admin.updateCourse.path, requireAdmin, async (req, res) => {
+    const updated = await storage.updateCourse(Number(req.params.id), req.body);
+    res.json(updated);
+  });
+  app.delete(api.admin.deleteCourse.path, requireAdmin, async (req, res) => {
+    await storage.deleteCourse(Number(req.params.id));
+    res.status(204).end();
+  });
+  app.put(api.admin.updateSeason.path, requireAdmin, async (req, res) => {
+    const updated = await storage.updateSeason(Number(req.params.id), req.body);
+    res.json(updated);
+  });
+  app.delete(api.admin.deleteSeason.path, requireAdmin, async (req, res) => {
+    await storage.deleteSeason(Number(req.params.id));
+    res.status(204).end();
+  });
+  app.put(api.admin.updateEpisode.path, requireAdmin, async (req, res) => {
+    const updated = await storage.updateEpisode(Number(req.params.id), req.body);
+    res.json(updated);
+  });
+  app.delete(api.admin.deleteEpisode.path, requireAdmin, async (req, res) => {
+    await storage.deleteEpisode(Number(req.params.id));
+    res.status(204).end();
   });
 
   await seedDatabase();
