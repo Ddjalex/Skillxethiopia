@@ -580,7 +580,7 @@ function UserManagement({ users }: { users: any[] }) {
 function AddEpisodeDialog({ courseId }: { courseId: number }) {
   const { toast } = useToast();
   const { data: seasons, isLoading: loadingSeasons } = useQuery<any[]>({
-    queryKey: [buildUrl(api.protected.dashboardCourse.path, { id: courseId })],
+    queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
     queryFn: async () => {
       const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
       if (!res.ok) throw new Error("Failed to fetch seasons");
@@ -595,7 +595,7 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [buildUrl(api.protected.dashboardCourse.path, { id: courseId })] });
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Success", description: "Episode added" });
     }
   });
