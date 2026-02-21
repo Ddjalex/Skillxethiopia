@@ -579,10 +579,11 @@ function UserManagement({ users }: { users: any[] }) {
 
 function AddEpisodeDialog({ courseId }: { courseId: number }) {
   const { toast } = useToast();
-  const { data: seasons } = useQuery<any[]>({
+  const { data: seasons, isLoading: loadingSeasons } = useQuery<any[]>({
     queryKey: [buildUrl(api.protected.dashboardCourse.path, { id: courseId })],
     queryFn: async () => {
       const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
+      if (!res.ok) throw new Error("Failed to fetch seasons");
       const data = await res.json();
       return data.seasons || [];
     }
@@ -615,7 +616,9 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
   });
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(open) => {
+      if (!open) form.reset();
+    }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm"><Plus className="h-3 w-3 mr-1" /> Episode</Button>
       </DialogTrigger>
@@ -623,52 +626,71 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
         <DialogHeader>
           <DialogTitle>Add Episode</DialogTitle>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => createEpisode.mutate(data))} className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>Season</Label>
-            <Select onValueChange={(v) => form.setValue("seasonId", parseInt(v))}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Season" />
-              </SelectTrigger>
-              <SelectContent>
-                {seasons?.map(s => <SelectItem key={s.id} value={s.id.toString()}>Season {s.seasonNumber}: {s.title}</SelectItem>)}
-              </SelectContent>
-            </Select>
+        {loadingSeasons ? (
+          <div className="flex justify-center p-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-          <div className="space-y-2">
-            <Label>Episode Title</Label>
-            <Input {...form.register("title")} />
+        ) : seasons && seasons.length > 0 ? (
+          <form onSubmit={form.handleSubmit((data) => createEpisode.mutate(data))} className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Season</Label>
+              <Select onValueChange={(v) => form.setValue("seasonId", parseInt(v))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Season" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seasons.map(s => (
+                    <SelectItem key={s.id} value={s.id.toString()}>
+                      Season {s.seasonNumber}: {s.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.formState.errors.seasonId && (
+                <p className="text-xs text-destructive">{form.formState.errors.seasonId.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Episode Title</Label>
+              <Input {...form.register("title")} />
+            </div>
+            <div className="space-y-2">
+              <Label>Episode Number</Label>
+              <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration (seconds)</Label>
+              <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Video Provider</Label>
+              <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue="VIMEO">
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIMEO">Vimeo</SelectItem>
+                  <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Video ID/URL</Label>
+              <Input {...form.register("videoRef")} placeholder="e.g. 123456789" />
+            </div>
+            <div className="space-y-2 col-span-2">
+              <Label>Description</Label>
+              <Textarea {...form.register("description")} />
+            </div>
+            <Button type="submit" className="w-full col-span-2" disabled={createEpisode.isPending}>
+              {createEpisode.isPending ? "Adding..." : "Add Episode"}
+            </Button>
+          </form>
+        ) : (
+          <div className="text-center p-8 space-y-4">
+            <p className="text-muted-foreground">This course has no seasons yet. Please add a season first.</p>
           </div>
-          <div className="space-y-2">
-            <Label>Episode Number</Label>
-            <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Duration (seconds)</Label>
-            <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} />
-          </div>
-          <div className="space-y-2">
-            <Label>Video Provider</Label>
-            <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue="VIMEO">
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="VIMEO">Vimeo</SelectItem>
-                <SelectItem value="YOUTUBE">YouTube</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Video ID/URL</Label>
-            <Input {...form.register("videoRef")} placeholder="e.g. 123456789" />
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label>Description</Label>
-            <Textarea {...form.register("description")} />
-          </div>
-          <Button type="submit" className="w-full col-span-2" disabled={createEpisode.isPending}>Add Episode</Button>
-        </form>
+        )}
       </DialogContent>
     </Dialog>
   );
