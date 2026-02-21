@@ -219,6 +219,19 @@ export async function registerRoutes(
     res.json(safe);
   });
 
+  app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
+    const { currentPassword, newPassword } = req.body;
+    const user = await storage.getUser((req.user as User).id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const isMatch = await compare(currentPassword, user.passwordHash);
+    if (!isMatch) return res.status(400).json({ message: "Incorrect current password" });
+
+    const passwordHash = await hash(newPassword, 10);
+    await db.update(users).set({ passwordHash }).where(eq(users.id, user.id));
+    res.json({ success: true });
+  });
+
   // Admin CRUD mappings
   app.post(api.admin.createCategory.path, requireAdmin, async (req, res) => {
     const created = await storage.createCategory(req.body);
