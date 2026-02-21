@@ -426,7 +426,9 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Success", description: "Season added" });
+      form.reset();
     }
   });
 
@@ -597,6 +599,7 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Success", description: "Episode added" });
+      form.reset();
     }
   });
 
