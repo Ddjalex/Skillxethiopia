@@ -17,7 +17,13 @@ export default function AuthPage() {
 
   // Redirect if logged in
   useEffect(() => {
-    if (user) setLocation("/dashboard");
+    if (user) {
+      if (user.role === "ADMIN") {
+        setLocation("/admin");
+      } else {
+        setLocation("/dashboard");
+      }
+    }
   }, [user, setLocation]);
 
   const searchParams = new URLSearchParams(window.location.search);

@@ -82,7 +82,8 @@ function useLoginMutation() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Welcome back!", description: `Logged in as ${user.name}` });
+      const description = user.role === "ADMIN" ? "Welcome to the Admin Dashboard" : `Logged in as ${user.name}`;
+      toast({ title: "Welcome back!", description });
     },
     onError: (error: Error) => {
       toast({
