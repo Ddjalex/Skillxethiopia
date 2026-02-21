@@ -52,16 +52,23 @@ export default function EpisodePlayer() {
           {/* Video Player Container */}
           <div className="w-full aspect-video bg-black relative shadow-2xl z-10">
             {streamData ? (
-              <ReactPlayer 
-                url={streamData.videoRef} 
-                width="100%" 
-                height="100%" 
-                controls 
-                playing
-                config={{
-                  vimeo: { playerOptions: { responsive: true } }
-                }}
-              />
+              <div className="w-full h-full">
+                <ReactPlayer 
+                  url={streamData.videoRef} 
+                  width="100%" 
+                  height="100%" 
+                  controls 
+                  playing={false}
+                  config={{
+                    vimeo: { 
+                      playerOptions: { 
+                        responsive: true,
+                        autoplay: false
+                      } 
+                    }
+                  }}
+                />
+              </div>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-white/50">
                 Failed to load video source
