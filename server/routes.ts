@@ -1,5 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { db, pool } from "./db";
+import { eq, or, and, ilike } from "drizzle-orm";
+import {
+  users, categories, courses, seasons, episodes, purchases, accessGrants,
+  type InsertUser, type Category, type InsertCategory,
+  type Course, type InsertCourse, type Season, type InsertSeason,
+  type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
+  type AccessGrant, type InsertAccessGrant
+} from "@shared/schema";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
@@ -7,13 +16,14 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { hash, compare } from "bcrypt";
-import type { User } from "@shared/schema";
 
 declare global {
   namespace Express {
-    interface User extends import("@shared/schema").User {}
+    interface User extends UserSchema {}
   }
 }
+
+type UserSchema = import("@shared/schema").User;
 
 export async function registerRoutes(
   httpServer: Server,
@@ -42,7 +52,7 @@ export async function registerRoutes(
     }
   }));
 
-  passport.serializeUser((user: User, done) => done(null, user.id));
+  passport.serializeUser((user: any, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
       const user = await storage.getUser(id);
@@ -91,7 +101,7 @@ export async function registerRoutes(
   });
 
   app.post(api.auth.login.path, passport.authenticate("local"), (req, res) => {
-    const { passwordHash: _, ...userSafe } = req.user as User;
+    const { passwordHash: _, ...userSafe } = req.user as any;
     res.status(200).json(userSafe);
   });
 
@@ -104,7 +114,7 @@ export async function registerRoutes(
 
   app.get(api.auth.me.path, (req, res) => {
     if (req.isAuthenticated()) {
-      const { passwordHash: _, ...userSafe } = req.user as User;
+      const { passwordHash: _, ...userSafe } = req.user as any;
       res.json(userSafe);
     } else {
       res.json(null);
@@ -169,14 +179,14 @@ export async function registerRoutes(
   });
 
   app.get(api.protected.purchases.path, requireAuth, async (req, res) => {
-    const purchases = await storage.getPurchasesByUser((req.user as User).id);
+    const purchases = await storage.getPurchasesByUser((req.user as any).id);
     res.json(purchases);
   });
 
   app.post(api.protected.buy.path, requireAuth, async (req, res) => {
     try {
       const input = api.protected.buy.input.parse(req.body);
-      const userId = (req.user as User).id;
+      const userId = (req.user as any).id;
       
       const purchase = await storage.createPurchase({
         userId,
@@ -221,7 +231,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/change-password", requireAdmin, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
-    const user = await storage.getUser((req.user as User).id);
+    const user = await storage.getUser((req.user as any).id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const isMatch = await compare(currentPassword, user.passwordHash);

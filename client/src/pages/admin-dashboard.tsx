@@ -19,7 +19,9 @@ import {
   Loader2, Users, BookOpen, Layers, Plus, 
   Video, Image as ImageIcon, FileText, Settings 
 } from "lucide-react";
-import { api, queryClient } from "@/lib/queryClient";
+import { api, buildUrl } from "@shared/routes";
+import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -171,11 +173,11 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
   const { toast } = useToast();
   const createCourse = useMutation({
     mutationFn: async (data: any) => {
-      const res = await api.post("/api/admin/courses", data);
+      const res = await apiRequest("POST", api.admin.createCourse.path, data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      queryClient.invalidateQueries({ queryKey: [api.public.courses.path] });
       toast({ title: "Success", description: "Course created successfully" });
     }
   });
@@ -293,7 +295,7 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
   const { toast } = useToast();
   const createSeason = useMutation({
     mutationFn: async (data: any) => {
-      const res = await api.post("/api/admin/seasons", { ...data, courseId });
+      const res = await apiRequest("POST", api.admin.createSeason.path, { ...data, courseId });
       return res.json();
     },
     onSuccess: () => {
@@ -341,11 +343,11 @@ function CategoryManagement({ categories }: { categories: any[] }) {
   const { toast } = useToast();
   const createCategory = useMutation({
     mutationFn: async (data: any) => {
-      const res = await api.post("/api/admin/categories", data);
+      const res = await apiRequest("POST", api.admin.createCategory.path, data);
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: [api.public.categories.path] });
       toast({ title: "Success", description: "Category created" });
     }
   });
@@ -444,9 +446,9 @@ function UserManagement({ users }: { users: any[] }) {
 function AddEpisodeDialog({ courseId }: { courseId: number }) {
   const { toast } = useToast();
   const { data: seasons } = useQuery<any[]>({
-    queryKey: [`/api/admin/seasons/course/${courseId}`],
+    queryKey: [buildUrl(api.protected.dashboardCourse.path, { id: courseId })],
     queryFn: async () => {
-      const res = await fetch(`/api/protected/dashboard/courses/${courseId}`);
+      const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
       const data = await res.json();
       return data.seasons || [];
     }
@@ -454,10 +456,11 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
 
   const createEpisode = useMutation({
     mutationFn: async (data: any) => {
-      const res = await api.post("/api/admin/episodes", data);
+      const res = await apiRequest("POST", api.admin.createEpisode.path, data);
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [buildUrl(api.protected.dashboardCourse.path, { id: courseId })] });
       toast({ title: "Success", description: "Episode added" });
     }
   });
@@ -544,7 +547,7 @@ function AdminSettings() {
 
   const changePassword = useMutation({
     mutationFn: async () => {
-      const res = await api.post("/api/admin/change-password", { currentPassword, newPassword });
+      const res = await apiRequest("POST", "/api/admin/change-password", { currentPassword, newPassword });
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
