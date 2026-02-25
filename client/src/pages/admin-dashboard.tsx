@@ -179,6 +179,8 @@ function PurchaseManagement() {
                 <TableHead>User</TableHead>
                 <TableHead>Item</TableHead>
                 <TableHead>Amount</TableHead>
+                <TableHead>Reference</TableHead>
+                <TableHead>Proof</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Action</TableHead>
               </TableRow>
@@ -189,6 +191,14 @@ function PurchaseManagement() {
                   <TableCell>{p.user?.name} ({p.user?.email})</TableCell>
                   <TableCell>{p.itemType} #{p.itemId}</TableCell>
                   <TableCell>{p.amount} {p.currency}</TableCell>
+                  <TableCell className="font-mono text-xs">{p.transactionRef}</TableCell>
+                  <TableCell>
+                    {p.paymentProofUrl && (
+                      <Button variant="ghost" size="sm" onClick={() => window.open(p.paymentProofUrl, '_blank')}>
+                        <ImageIcon className="h-4 w-4 mr-1" /> View
+                      </Button>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={p.status === "PAID" ? "default" : "secondary"}>
                       {p.status}

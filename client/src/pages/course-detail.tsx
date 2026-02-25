@@ -63,14 +63,15 @@ export default function CourseDetailPage() {
     });
   };
 
-  const handlePaymentConfirm = (transactionRef: string) => {
+  const handlePaymentConfirm = (transactionRef: string, paymentProofUrl?: string) => {
     if (!paymentState.itemType || !paymentState.itemId) return;
     
     buyMutation.mutate({ 
       itemType: paymentState.itemType, 
       itemId: paymentState.itemId, 
       amount: paymentState.amount,
-      // We should ideally pass transactionRef to backend too
+      transactionRef,
+      paymentProofUrl,
     }, {
       onSuccess: () => {
         setPaymentState(prev => ({ ...prev, isOpen: false }));

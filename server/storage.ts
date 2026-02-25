@@ -191,7 +191,10 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(purchases).where(eq(purchases.userId, userId));
   }
   async createPurchase(purchase: InsertPurchase): Promise<Purchase> {
-    const [created] = await db.insert(purchases).values(purchase).returning();
+    const [created] = await db.insert(purchases).values({
+      ...purchase,
+      status: "PENDING"
+    }).returning();
     return created;
   }
 

@@ -1,15 +1,7 @@
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, Wallet } from "lucide-react";
-import { useState, useEffect } from "react";
+import { CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, Wallet, Upload, Image as ImageIcon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import telebirrQr from "@assets/image_1772002240311.png";
 
 interface PaymentPanelProps {
   isOpen: boolean;
@@ -17,7 +9,7 @@ interface PaymentPanelProps {
   itemType: "SEASON" | "EPISODE";
   itemId: number;
   amount: string;
-  onConfirm: (transactionRef: string) => void;
+  onConfirm: (transactionRef: string, paymentProofUrl?: string) => void;
   isPending: boolean;
 }
 
@@ -33,6 +25,8 @@ export function PaymentPanel({
   const [step, setStep] = useState<"select" | "pay" | "confirm">("select");
   const [provider, setProvider] = useState<"TELEBIRR" | "CBE_BIRR" | "HELLOCASH" | null>(null);
   const [transactionRef, setTransactionRef] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   // Reset state when dialog closes/opens
@@ -41,6 +35,7 @@ export function PaymentPanel({
       setStep("select");
       setProvider(null);
       setTransactionRef("");
+      setPreviewUrl(null);
     }
   }, [isOpen]);
 
@@ -48,8 +43,16 @@ export function PaymentPanel({
     navigator.clipboard.writeText(text);
     toast({
       title: "Copied!",
-      description: "Payment number copied to clipboard",
+      description: "Payment details copied to clipboard",
     });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+    }
   };
 
   const providers = [
@@ -59,7 +62,8 @@ export function PaymentPanel({
       icon: Wallet, 
       color: "text-[#005CAB]",
       number: "0911223344",
-      merchantId: "M12345"
+      merchantId: "M12345",
+      qrImage: telebirrQr
     },
     { 
       id: "CBE_BIRR" as const, 
@@ -83,7 +87,7 @@ export function PaymentPanel({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[450px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
             {step === "select" && "Choose Payment Method"}
@@ -93,7 +97,7 @@ export function PaymentPanel({
           <DialogDescription>
             {step === "select" && "Select your preferred payment provider to continue."}
             {step === "pay" && `Send the exact amount to the merchant details below.`}
-            {step === "confirm" && "Enter your transaction reference to complete the purchase."}
+            {step === "confirm" && "Enter your transaction reference and upload a screenshot to complete the purchase."}
           </DialogDescription>
         </DialogHeader>
 
@@ -127,6 +131,24 @@ export function PaymentPanel({
                 <p className="text-4xl font-bold text-primary">{amount} <span className="text-lg font-normal">ETB</span></p>
               </div>
 
+              {selectedProviderData.qrImage && (
+                <div className="flex justify-center">
+                  <div className="relative group">
+                    <img 
+                      src={selectedProviderData.qrImage} 
+                      alt="Payment QR" 
+                      className="w-48 h-48 rounded-lg shadow-sm border border-border"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
+                      <Button size="sm" variant="secondary" onClick={() => window.open(selectedProviderData.qrImage, '_blank')}>
+                        <ExternalLink className="h-3 w-3 mr-2" />
+                        View Full
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-card border rounded-lg">
                   <div className="space-y-0.5">
@@ -159,7 +181,7 @@ export function PaymentPanel({
           )}
 
           {step === "confirm" && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Transaction Reference / ID</label>
                 <input
@@ -170,6 +192,41 @@ export function PaymentPanel({
                   onChange={(e) => setTransactionRef(e.target.value)}
                 />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Payment Screenshot (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                />
+                
+                {!previewUrl ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-32 border-dashed flex flex-col gap-2"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Click to upload screenshot</span>
+                  </Button>
+                ) : (
+                  <div className="relative group aspect-video bg-muted rounded-lg overflow-hidden border">
+                    <img src={previewUrl} alt="Screenshot preview" className="w-full h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                        Change
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => setPreviewUrl(null)}>
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <p className="text-xs text-muted-foreground bg-muted p-3 rounded">
                 Note: Our team will verify this reference. Once verified, the content will be automatically unlocked in your dashboard.
               </p>
@@ -177,7 +234,7 @@ export function PaymentPanel({
           )}
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <DialogFooter className="flex-col sm:flex-row gap-2 border-t pt-4">
           {step === "pay" && (
             <>
               <Button variant="ghost" className="flex-1" onClick={() => setStep("select")}>Back</Button>
@@ -190,7 +247,7 @@ export function PaymentPanel({
               <Button 
                 className="flex-1" 
                 disabled={!transactionRef || isPending}
-                onClick={() => onConfirm(transactionRef)}
+                onClick={() => onConfirm(transactionRef, previewUrl || undefined)}
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Proof"}
               </Button>

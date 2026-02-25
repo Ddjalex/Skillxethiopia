@@ -221,12 +221,12 @@ export async function registerRoutes(
         userId,
         itemType: input.itemType,
         itemId: input.itemId,
-        amount: input.amount || (input.itemType === "SEASON" ? "19.99" : "5.99"),
+        amount: input.amount,
         currency: "ETB",
-        provider: "TELEBIRR",
+        provider: input.provider || "TELEBIRR",
+        transactionRef: input.transactionRef,
+        paymentProofUrl: input.paymentProofUrl,
       });
-      
-      // REMOVED automatic access grant. Admin must approve.
       
       res.status(201).json(purchase);
     } catch(err) {

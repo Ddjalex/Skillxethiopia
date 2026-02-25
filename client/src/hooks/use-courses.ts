@@ -97,11 +97,17 @@ export function useBuyItem() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async ({ itemType, itemId, amount }: { itemType: "SEASON" | "EPISODE", itemId: number, amount: string }) => {
+    mutationFn: async ({ itemType, itemId, amount, transactionRef, paymentProofUrl }: { 
+      itemType: "SEASON" | "EPISODE", 
+      itemId: number, 
+      amount: string,
+      transactionRef: string,
+      paymentProofUrl?: string
+    }) => {
       const res = await fetch(api.protected.buy.path, {
         method: api.protected.buy.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemType, itemId, amount }),
+        body: JSON.stringify({ itemType, itemId, amount, transactionRef, paymentProofUrl }),
       });
       
       if (!res.ok) {
@@ -119,7 +125,6 @@ export function useBuyItem() {
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboard.path] });
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path] });
       queryClient.invalidateQueries({ queryKey: [api.protected.purchases.path] });
-      // Invalidate public detail too so locks update if user revisits
       queryClient.invalidateQueries({ queryKey: [api.public.courseDetail.path] });
     },
     onError: (err: Error) => {

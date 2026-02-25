@@ -159,7 +159,14 @@ export const api = {
     buy: {
       method: 'POST' as const,
       path: '/api/purchases' as const,
-      input: z.object({ itemType: z.enum(["SEASON", "EPISODE"]), itemId: z.number() }),
+      input: z.object({ 
+        itemType: z.enum(["SEASON", "EPISODE"]), 
+        itemId: z.number(),
+        amount: z.string(),
+        transactionRef: z.string(),
+        paymentProofUrl: z.string().optional(),
+        provider: z.string().optional(),
+      }),
       responses: {
         201: z.custom<typeof purchases.$inferSelect>(),
         401: errorSchemas.unauthorized,
