@@ -236,7 +236,7 @@ export function PaymentPanel({
               <Button variant="ghost" className="flex-1" onClick={() => setStep("select")}>Back</Button>
               <Button 
                 className="flex-1" 
-                disabled={!transactionRef || !previewUrl || isPending}
+                disabled={isPending}
                 onClick={() => onConfirm(transactionRef, previewUrl || undefined)}
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Proof"}

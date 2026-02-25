@@ -200,12 +200,24 @@ function PurchaseManagement() {
                   <TableCell>{p.user?.name} ({p.user?.email})</TableCell>
                   <TableCell>{p.itemType} #{p.itemId}</TableCell>
                   <TableCell>{p.amount} {p.currency}</TableCell>
-                  <TableCell className="font-mono text-xs">{p.transactionRef}</TableCell>
+                  <TableCell className="font-mono text-xs">{p.transactionRef || "-"}</TableCell>
                   <TableCell>
                     {p.paymentProofUrl && (
-                      <Button variant="ghost" size="sm" onClick={() => window.open(p.paymentProofUrl, '_blank')}>
-                        <ImageIcon className="h-4 w-4 mr-1" /> View
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <ImageIcon className="h-4 w-4 mr-1" /> View
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>Payment Proof</DialogTitle>
+                          </DialogHeader>
+                          <div className="mt-4">
+                            <img src={p.paymentProofUrl} alt="Payment Proof" className="w-full h-auto rounded-lg border" />
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     )}
                   </TableCell>
                   <TableCell>

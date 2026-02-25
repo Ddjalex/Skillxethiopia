@@ -15,6 +15,7 @@ import Dashboard from "@/pages/dashboard";
 import DashboardCourse from "@/pages/dashboard-course";
 import EpisodePlayer from "@/pages/episode-player";
 import AdminDashboard from "@/pages/admin-dashboard";
+import VideoOnly from "@/pages/video-only";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/auth" component={AuthPage} />
       <Route path="/browse" component={Browse} />
       <Route path="/course/:slug" component={CourseDetail} />
+      <Route path="/video/:id" component={VideoOnly} />
       
       {/* Protected User Routes */}
       <ProtectedRoute path="/dashboard" component={Dashboard} />

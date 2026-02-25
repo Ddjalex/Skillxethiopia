@@ -103,7 +103,7 @@ export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, c
 export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
 export const insertEpisodeSchema = createInsertSchema(episodes).omit({ id: true, createdAt: true });
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, createdAt: true, status: true }).extend({
-  transactionRef: z.string().min(1, "Transaction reference is required"),
+  transactionRef: z.string().optional(),
   paymentProofUrl: z.string().optional(),
 });
 export const insertAccessGrantSchema = createInsertSchema(accessGrants).omit({ id: true, createdAt: true });
