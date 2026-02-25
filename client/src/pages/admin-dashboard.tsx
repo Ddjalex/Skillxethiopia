@@ -421,6 +421,233 @@ function StatCard({ title, value, icon }: { title: string, value: number, icon: 
   );
 }
 
+function EditSeasonDialog({ season, courseId }: { season: any, courseId: number }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const updateSeason = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", buildUrl(api.admin.updateSeason.path, { id: season.id }), data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
+      toast({ title: "Updated", description: "Season updated successfully" });
+      setOpen(false);
+    }
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertSeasonSchema.omit({ courseId: true })),
+    defaultValues: {
+      title: season.title,
+      seasonNumber: season.seasonNumber,
+      price: season.price
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Season</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit((data) => updateSeason.mutate(data))} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Season Title</Label>
+            <Input {...form.register("title")} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Season Number</Label>
+              <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Price (ETB)</Label>
+              <Input {...form.register("price")} />
+            </div>
+          </div>
+          <Button type="submit" className="w-full" disabled={updateSeason.isPending}>Save Changes</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditEpisodeDialog({ episode, courseId }: { episode: any, courseId: number }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+
+  const updateEpisode = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", buildUrl(api.admin.updateEpisode.path, { id: episode.id }), data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
+      toast({ title: "Updated", description: "Episode updated successfully" });
+      setOpen(false);
+    }
+  });
+
+  const form = useForm({
+    resolver: zodResolver(insertEpisodeSchema),
+    defaultValues: {
+      seasonId: episode.seasonId,
+      title: episode.title,
+      episodeNumber: episode.episodeNumber,
+      description: episode.description || "",
+      durationSec: episode.durationSec,
+      isPreview: episode.isPreview,
+      price: episode.price,
+      videoProvider: episode.videoProvider,
+      videoRef: episode.videoRef
+    }
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" size="icon"><Pencil className="h-4 w-4" /></Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Edit Episode</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={form.handleSubmit((data) => updateEpisode.mutate(data))} className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Title</Label>
+            <Input {...form.register("title")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Episode Number</Label>
+            <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} />
+          </div>
+          <div className="space-y-2">
+            <Label>Price (ETB)</Label>
+            <Input {...form.register("price")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Video Provider</Label>
+            <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue={episode.videoProvider}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="VIMEO">Vimeo</SelectItem>
+                <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                <SelectItem value="URL">Direct URL</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Video Ref</Label>
+            <Input {...form.register("videoRef")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Duration (Seconds)</Label>
+            <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} />
+          </div>
+          <div className="flex items-center gap-2 pt-8">
+            <input type="checkbox" id="editIsPreview" {...form.register("isPreview")} className="rounded border-gray-300" />
+            <Label htmlFor="editIsPreview">Preview Episode</Label>
+          </div>
+          <div className="col-span-2 space-y-2">
+            <Label>Description</Label>
+            <Textarea {...form.register("description")} />
+          </div>
+          <Button type="submit" className="col-span-2" disabled={updateEpisode.isPending}>Save Changes</Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CourseContentDialog({ courseId }: { courseId: number }) {
+  const { data: courseData, isLoading } = useQuery<any>({
+    queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
+    queryFn: async () => {
+      const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
+      if (!res.ok) throw new Error("Failed to fetch course content");
+      return res.json();
+    }
+  });
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm"><Layers className="h-4 w-4 mr-2" /> Content</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Course Content Management</DialogTitle>
+          <DialogDescription>Edit seasons and episodes for this course.</DialogDescription>
+        </DialogHeader>
+        
+        {isLoading ? (
+          <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+        ) : (
+          <div className="space-y-8 mt-4">
+            {courseData?.seasons?.map((season: any) => (
+              <Card key={season.id}>
+                <CardHeader className="flex flex-row items-center justify-between py-4">
+                  <div>
+                    <CardTitle className="text-lg">Season {season.seasonNumber}: {season.title}</CardTitle>
+                    <CardDescription>{season.price} ETB</CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <EditSeasonDialog season={season} courseId={courseId} />
+                    <DeleteConfirmDialog 
+                      type="season" 
+                      id={season.id} 
+                      onDelete={() => queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] })} 
+                    />
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-12">#</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {season.episodes?.map((ep: any) => (
+                        <TableRow key={ep.id}>
+                          <TableCell>{ep.episodeNumber}</TableCell>
+                          <TableCell>
+                            {ep.title}
+                            {ep.isPreview && <Badge variant="secondary" className="ml-2">Preview</Badge>}
+                          </TableCell>
+                          <TableCell>{ep.price} ETB</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <EditEpisodeDialog episode={ep} courseId={courseId} />
+                              <DeleteConfirmDialog 
+                                type="episode" 
+                                id={ep.id} 
+                                onDelete={() => queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] })} 
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function CourseManagement({ courses, categories }: { courses: any[], categories: any[] }) {
   const { toast } = useToast();
   const createCourse = useMutation({
@@ -552,6 +779,7 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
                       <TableCell>{course.category?.name || "Uncategorized"}</TableCell>
                       <TableCell>
                         <div className="flex gap-2">
+                          <CourseContentDialog courseId={course.id} />
                           <AddSeasonDialog courseId={course.id} />
                           <AddEpisodeDialog courseId={course.id} />
                           <EditCourseDialog course={course} categories={categories} />
