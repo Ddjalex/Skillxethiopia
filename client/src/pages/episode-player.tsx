@@ -69,7 +69,11 @@ export default function EpisodePlayer() {
                       playerOptions: { 
                         responsive: true,
                         autoplay: true,
-                        dnt: true
+                        muted: false,
+                        dnt: true,
+                        title: true,
+                        byline: true,
+                        portrait: true
                       } 
                     },
                     youtube: {

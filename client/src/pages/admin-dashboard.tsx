@@ -539,32 +539,32 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {courses.map((course) => (
-                <TableRow key={course.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-3">
-                      {course.thumbnailUrl && <img src={course.thumbnailUrl} className="w-10 h-10 rounded object-cover" />}
-                      {course.title}
-                    </div>
-                  </TableCell>
-                  <TableCell>{course.instructorName}</TableCell>
-                  <TableCell>{course.category?.name || "Uncategorized"}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <AddSeasonDialog courseId={course.id} />
-                      <AddEpisodeDialog courseId={course.id} />
-                      <EditCourseDialog course={course} categories={categories} />
-                      <DeleteConfirmDialog 
-                        type="course" 
-                        id={course.id} 
-                        onDelete={() => queryClient.invalidateQueries({ queryKey: [api.public.courses.path] })} 
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
+                <TableBody>
+                  {courses.map((course) => (
+                    <TableRow key={course.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {course.thumbnailUrl && <img src={course.thumbnailUrl} className="w-10 h-10 rounded object-cover" />}
+                          {course.title}
+                        </div>
+                      </TableCell>
+                      <TableCell>{course.instructorName}</TableCell>
+                      <TableCell>{course.category?.name || "Uncategorized"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <AddSeasonDialog courseId={course.id} />
+                          <AddEpisodeDialog courseId={course.id} />
+                          <EditCourseDialog course={course} categories={categories} />
+                          <DeleteConfirmDialog 
+                            type="course" 
+                            id={course.id} 
+                            onDelete={() => queryClient.invalidateQueries({ queryKey: [api.public.courses.path] })} 
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
           </Table>
         </CardContent>
       </Card>
@@ -855,6 +855,7 @@ function UserManagement({ users }: { users: any[] }) {
 
 function AddEpisodeDialog({ courseId }: { courseId: number }) {
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
   const { data: seasons, isLoading: loadingSeasons } = useQuery<any[]>({
     queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
     queryFn: async () => {
@@ -873,6 +874,7 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Success", description: "Episode added" });
+      setOpen(false);
       form.reset();
     }
   });
@@ -896,7 +898,6 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
 
   const detectDuration = async (url: string) => {
     if (!url) return;
-    
     try {
       if (videoProvider === "VIMEO") {
         const videoId = url.split("/").pop()?.split("?")[0];
@@ -914,8 +915,9 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
   };
 
   return (
-    <Dialog onOpenChange={(open) => {
-      if (!open) form.reset();
+    <Dialog open={open} onOpenChange={(val) => {
+      setOpen(val);
+      if (!val) form.reset();
     }}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm"><Plus className="h-3 w-3 mr-1" /> Episode</Button>
@@ -944,9 +946,59 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
                   ))}
                 </SelectContent>
               </Select>
-              {form.formState.errors.seasonId && (
-                <p className="text-xs text-destructive">{form.formState.errors.seasonId.message}</p>
-              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input {...form.register("title")} placeholder="Episode Title" />
+            </div>
+            <div className="space-y-2">
+              <Label>Episode Number</Label>
+              <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} />
+            </div>
+            <div className="space-y-2">
+              <Label>Price (ETB)</Label>
+              <Input {...form.register("price")} placeholder="0" />
+            </div>
+            <div className="space-y-2">
+              <Label>Video Provider</Label>
+              <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue="VIMEO">
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIMEO">Vimeo</SelectItem>
+                  <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                  <SelectItem value="URL">Direct URL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Video Ref (ID or URL)</Label>
+              <Input {...form.register("videoRef")} placeholder="Vimeo ID or URL" onBlur={(e) => detectDuration(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Duration (Seconds)</Label>
+              <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} />
+            </div>
+            <div className="flex items-center gap-2 pt-8">
+              <input type="checkbox" id="isPreview" {...form.register("isPreview")} className="rounded border-gray-300" />
+              <Label htmlFor="isPreview">Preview Episode</Label>
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label>Description</Label>
+              <Textarea {...form.register("description")} placeholder="Episode description..." />
+            </div>
+            <Button type="submit" className="col-span-2" disabled={createEpisode.isPending}>
+              {createEpisode.isPending ? "Adding..." : "Add Episode"}
+            </Button>
+          </form>
+        ) : (
+          <div className="p-8 text-center text-muted-foreground">
+            Please add a season first.
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
             </div>
             <div className="space-y-2">
               <Label>Episode Title</Label>
