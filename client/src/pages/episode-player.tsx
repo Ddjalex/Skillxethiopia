@@ -83,12 +83,12 @@ export default function EpisodePlayer() {
                   width="100%" 
                   height="100%" 
                   controls 
-                  playing={false}
+                  playing={true}
                   config={{
                     vimeo: { 
                       playerOptions: { 
                         responsive: true,
-                        autoplay: false,
+                        autoplay: true,
                         muted: false,
                         dnt: false,
                         title: true,
@@ -98,7 +98,7 @@ export default function EpisodePlayer() {
                     },
                     youtube: {
                       embedOptions: {
-                        autoplay: 0,
+                        autoplay: 1,
                         modestbranding: 1,
                         rel: 0
                       }
