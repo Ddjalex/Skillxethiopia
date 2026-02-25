@@ -531,17 +531,19 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any, courseId: numb
             <Label>Price (ETB)</Label>
             <Input {...form.register("price")} />
           </div>
-          <div className="space-y-2">
-            <Label>Video Provider</Label>
-            <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue={episode.videoProvider}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="VIMEO">Vimeo</SelectItem>
-                <SelectItem value="YOUTUBE">YouTube</SelectItem>
-                <SelectItem value="URL">Direct URL</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            <div className="space-y-2">
+              <Label>Video Provider</Label>
+              <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue={episode.videoProvider}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="VIMEO">Vimeo</SelectItem>
+                  <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                  <SelectItem value="DAILYMOTION">DailyMotion</SelectItem>
+                  <SelectItem value="WISTIA">Wistia</SelectItem>
+                  <SelectItem value="URL">Direct URL</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           <div className="space-y-2">
             <Label>Video Ref</Label>
             <Input {...form.register("videoRef")} />
@@ -1243,6 +1245,8 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
                 <SelectContent>
                   <SelectItem value="VIMEO">Vimeo</SelectItem>
                   <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                  <SelectItem value="DAILYMOTION">DailyMotion</SelectItem>
+                  <SelectItem value="WISTIA">Wistia</SelectItem>
                   <SelectItem value="URL">Direct URL</SelectItem>
                 </SelectContent>
               </Select>

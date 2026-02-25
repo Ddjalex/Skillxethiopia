@@ -80,7 +80,15 @@ export default function EpisodePlayer() {
                       ? (streamData.videoRef.startsWith("http") 
                           ? streamData.videoRef 
                           : `https://www.youtube.com/watch?v=${streamData.videoRef}`)
-                      : streamData.videoRef
+                      : streamData.videoProvider === "DAILYMOTION"
+                        ? (streamData.videoRef.startsWith("http")
+                            ? streamData.videoRef
+                            : `https://www.dailymotion.com/video/${streamData.videoRef}`)
+                        : streamData.videoProvider === "WISTIA"
+                          ? (streamData.videoRef.startsWith("http")
+                              ? streamData.videoRef
+                              : `https://home.wistia.com/medias/${streamData.videoRef}`)
+                          : streamData.videoRef
                   } 
                   width="100%" 
                   height="100%" 

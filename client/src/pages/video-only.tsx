@@ -60,7 +60,11 @@ export default function VideoOnlyPage() {
                     : `https://vimeo.com/${data.videoRef}`)
               : data.videoProvider === "YOUTUBE"
                 ? (data.videoRef.startsWith("http") ? data.videoRef : `https://www.youtube.com/watch?v=${data.videoRef}`)
-                : data.videoRef
+                : data.videoProvider === "DAILYMOTION"
+                  ? (data.videoRef.startsWith("http") ? data.videoRef : `https://www.dailymotion.com/video/${data.videoRef}`)
+                  : data.videoProvider === "WISTIA"
+                    ? (data.videoRef.startsWith("http") ? data.videoRef : `https://home.wistia.com/medias/${data.videoRef}`)
+                    : data.videoRef
             }
             width="100%"
             height="100%"
