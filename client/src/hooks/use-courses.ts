@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 // ============================================
 // PUBLIC
@@ -66,6 +67,7 @@ export function useDashboardCourses() {
 }
 
 export function useDashboardCourse(id: number) {
+  const { user } = useAuth();
   return useQuery({
     queryKey: [api.protected.dashboardCourse.path, id],
     queryFn: async () => {
@@ -76,7 +78,7 @@ export function useDashboardCourse(id: number) {
       if (!res.ok) throw new Error("Failed to fetch course content");
       return api.protected.dashboardCourse.responses[200].parse(await res.json());
     },
-    enabled: !!id,
+    enabled: !!user && !!id,
   });
 }
 

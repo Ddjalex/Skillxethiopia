@@ -22,6 +22,7 @@ export default function CourseDetailPage() {
   const { data, isLoading } = useCourseDetail(slug);
   const { user } = useAuth();
   const buyMutation = useBuyItem();
+  const { data: dashboardData } = useDashboardCourse(data?.course?.id || 0);
 
   const [paymentState, setPaymentState] = useState<{
     isOpen: boolean;
@@ -46,10 +47,18 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { course, seasons, category } = data;
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <p>Course not found</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Use dashboard course hook if logged in to get unlock status
-  const { data: dashboardData } = useDashboardCourse(course?.id || 0, { enabled: !!user && !!course });
+  const { course, seasons, category } = data;
   
   const enrichedSeasons = seasons.map(s => {
     const dashboardSeason = dashboardData?.seasons.find(ds => ds.id === s.id);
