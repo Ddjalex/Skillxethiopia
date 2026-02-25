@@ -200,7 +200,8 @@ export class DatabaseStorage implements IStorage {
   async createPurchase(purchase: InsertPurchase): Promise<Purchase> {
     const [created] = await db.insert(purchases).values({
       ...purchase,
-      status: "PENDING"
+      status: "PENDING",
+      createdAt: new Date()
     }).returning();
     return created;
   }
