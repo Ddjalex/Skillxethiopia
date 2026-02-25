@@ -46,9 +46,27 @@ export default function CourseDetailPage() {
     );
   }
 
-  if (!data) return <div>Not found</div>;
-
   const { course, seasons, category } = data;
+
+  // Use dashboard course hook if logged in to get unlock status
+  const { data: dashboardData } = useDashboardCourse(course?.id || 0, { enabled: !!user && !!course });
+  
+  const enrichedSeasons = seasons.map(s => {
+    const dashboardSeason = dashboardData?.seasons.find(ds => ds.id === s.id);
+    return {
+      ...s,
+      isUnlocked: dashboardSeason?.isUnlocked || false,
+      isPending: dashboardSeason?.isPending || false,
+      episodes: s.episodes.map(e => {
+        const dashboardEp = dashboardSeason?.episodes.find(de => de.id === e.id);
+        return {
+          ...e,
+          isUnlocked: dashboardEp?.isUnlocked || e.isPreview || e.price === "0",
+          isPending: dashboardEp?.isPending || false
+        };
+      })
+    };
+  });
 
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) {
@@ -166,7 +184,7 @@ export default function CourseDetailPage() {
           <h2 className="text-2xl font-bold mb-6">Course Content</h2>
           
           <Accordion type="single" collapsible className="w-full space-y-4">
-            {seasons.map((season) => (
+            {enrichedSeasons.map((season) => (
               <AccordionItem key={season.id} value={`season-${season.id}`} className="border rounded-lg px-4 bg-card">
                 <AccordionTrigger className="hover:no-underline py-4">
                   <div className="flex flex-1 items-center justify-between mr-4">
@@ -175,16 +193,26 @@ export default function CourseDetailPage() {
                     </span>
                     <div className="flex items-center gap-4">
                       <Badge variant="outline">{season.episodes.length} Episodes</Badge>
-                      <Button 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBuyInitiate("SEASON", season.id, season.price);
-                        }}
-                        disabled={buyMutation.isPending}
-                      >
-                        Buy Season ({season.price} ETB)
-                      </Button>
+                      {season.isUnlocked ? (
+                        <Badge variant="outline" className="text-green-500 border-green-500">
+                          <CheckCircle className="w-3 h-3 mr-1" /> Unlocked
+                        </Badge>
+                      ) : season.isPending ? (
+                        <Badge variant="outline" className="text-orange-500 border-orange-500">
+                          <AlertCircle className="w-3 h-3 mr-1" /> Pending Approval
+                        </Badge>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuyInitiate("SEASON", season.id, season.price);
+                          }}
+                          disabled={buyMutation.isPending}
+                        >
+                          Buy Season ({season.price} ETB)
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </AccordionTrigger>
@@ -209,12 +237,16 @@ export default function CourseDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {ep.isPreview ? (
+                          {ep.isUnlocked ? (
                             <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
                               <Button size="sm" variant="ghost" className="text-primary hover:text-primary/80">
-                                <Play className="w-4 h-4 mr-2" /> Watch Preview
+                                <Play className="w-4 h-4 mr-2" /> {ep.isPreview ? "Watch Preview" : "Watch"}
                               </Button>
                             </Link>
+                          ) : ep.isPending ? (
+                            <Badge variant="outline" className="text-orange-500 border-orange-500">
+                              <AlertCircle className="w-3 h-3 mr-1" /> Pending Approval
+                            </Badge>
                           ) : (
                             <Button 
                               size="sm" 

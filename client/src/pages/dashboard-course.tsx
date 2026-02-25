@@ -93,19 +93,22 @@ export default function DashboardCourse() {
                   </span>
                   {!season.isUnlocked && (
                     <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-orange-500 border-orange-500">
-                        Pending Approval
-                      </Badge>
-                      <Button 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBuyInitiate("SEASON", season.id, season.price);
-                        }}
-                        disabled={buyMutation.isPending}
-                      >
-                        Unlock Season ({season.price})
-                      </Button>
+                      {season.isPending ? (
+                        <Badge variant="outline" className="text-orange-500 border-orange-500">
+                          Pending Approval
+                        </Badge>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuyInitiate("SEASON", season.id, season.price);
+                          }}
+                          disabled={buyMutation.isPending}
+                        >
+                          Unlock Season ({season.price})
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -136,17 +139,20 @@ export default function DashboardCourse() {
                         </Link>
                       ) : (
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-orange-500 border-orange-500">
-                            Pending Approval
-                          </Badge>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
-                            disabled={buyMutation.isPending}
-                          >
-                            <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
-                          </Button>
+                          {ep.isPending ? (
+                            <Badge variant="outline" className="text-orange-500 border-orange-500">
+                              Pending Approval
+                            </Badge>
+                          ) : (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
+                              disabled={buyMutation.isPending}
+                            >
+                              <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
+                            </Button>
+                          )}
                         </div>
                       )}
                     </div>

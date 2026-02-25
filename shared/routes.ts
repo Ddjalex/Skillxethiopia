@@ -64,8 +64,12 @@ export const dashboardDetailSchema = z.object({
   course: z.custom<typeof courses.$inferSelect>(),
   seasons: z.array(
     z.custom<typeof seasons.$inferSelect>().and(z.object({
-      episodes: z.array(z.custom<typeof episodes.$inferSelect>().and(z.object({ isUnlocked: z.boolean().optional() }))),
+      episodes: z.array(z.custom<typeof episodes.$inferSelect>().and(z.object({ 
+        isUnlocked: z.boolean().optional(),
+        isPending: z.boolean().optional()
+      }))),
       isUnlocked: z.boolean(),
+      isPending: z.boolean().optional(),
     }))
   ),
 });

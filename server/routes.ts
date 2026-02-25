@@ -181,12 +181,24 @@ export async function registerRoutes(
       
       const isSeasonUnlocked = seasonGrant.length > 0;
 
+      // Check if season has pending purchase
+      const seasonPending = await db.select().from(purchases).where(
+        and(
+          eq(purchases.userId, userId),
+          eq(purchases.itemType, "SEASON"),
+          eq(purchases.itemId, s.id),
+          eq(purchases.status, "PENDING")
+        )
+      ).limit(1);
+
       return {
         ...s,
         isUnlocked: isSeasonUnlocked,
+        isPending: seasonPending.length > 0,
         episodes: await Promise.all(eps.map(async e => {
           // Check if individual episode is unlocked (either via season or directly)
           let isEpisodeUnlocked = isSeasonUnlocked || e.isPreview || e.price === "0";
+          let isEpisodePending = false;
           
           if (!isEpisodeUnlocked) {
             const epGrant = await db.select().from(accessGrants).where(
@@ -197,9 +209,21 @@ export async function registerRoutes(
               )
             ).limit(1);
             isEpisodeUnlocked = epGrant.length > 0;
+
+            if (!isEpisodeUnlocked) {
+              const epPending = await db.select().from(purchases).where(
+                and(
+                  eq(purchases.userId, userId),
+                  eq(purchases.itemType, "EPISODE"),
+                  eq(purchases.itemId, e.id),
+                  eq(purchases.status, "PENDING")
+                )
+              ).limit(1);
+              isEpisodePending = epPending.length > 0;
+            }
           }
 
-          return { ...e, isUnlocked: isEpisodeUnlocked };
+          return { ...e, isUnlocked: isEpisodeUnlocked, isPending: isEpisodePending };
         }))
       };
     }));
