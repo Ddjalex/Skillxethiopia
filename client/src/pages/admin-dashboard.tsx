@@ -23,7 +23,7 @@ import {
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +52,8 @@ import { useToast } from "@/hooks/use-toast";
 export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"overview" | "courses" | "categories" | "users" | "settings" | "payments">("overview");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const { data: users, isLoading: loadingUsers } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
@@ -265,6 +267,15 @@ function PaymentManagement() {
     }
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      form.setValue("qrCodeUrl", url); // In a real app, you'd upload to S3/Cloudinary here
+    }
+  };
+
   if (isLoading) return <Loader2 className="h-8 w-8 animate-spin" />;
 
   return (
@@ -304,8 +315,36 @@ function PaymentManagement() {
                 <Input {...form.register("merchantId")} />
               </div>
               <div className="space-y-2">
-                <Label>QR Code URL</Label>
-                <Input {...form.register("qrCodeUrl")} placeholder="https://..." />
+                <Label>QR Code Image</Label>
+                <div className="flex flex-col gap-2">
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    className="hidden" 
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                  />
+                  {!previewUrl ? (
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full h-32 border-dashed flex flex-col gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload QR Code</span>
+                    </Button>
+                  ) : (
+                    <div className="relative group aspect-square w-32 mx-auto bg-muted rounded-lg overflow-hidden border">
+                      <img src={previewUrl} alt="QR preview" className="w-full h-full object-contain" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                          Change
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <Button type="submit" className="w-full" disabled={createOption.isPending}>Add Option</Button>
             </form>
