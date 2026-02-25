@@ -618,6 +618,27 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
     }
   });
 
+  const videoProvider = form.watch("videoProvider");
+
+  const detectDuration = async (url: string) => {
+    if (!url) return;
+    
+    try {
+      if (videoProvider === "VIMEO") {
+        const videoId = url.split("/").pop()?.split("?")[0];
+        if (!videoId || isNaN(Number(videoId))) return;
+        const res = await fetch(`https://vimeo.com/api/v2/video/${videoId}.json`);
+        const data = await res.json();
+        if (data && data[0] && data[0].duration) {
+          form.setValue("durationSec", data[0].duration);
+          toast({ title: "Duration Detected", description: `${Math.round(data[0].duration / 60)} minutes detected.` });
+        }
+      }
+    } catch (e) {
+      console.error("Failed to detect duration", e);
+    }
+  };
+
   return (
     <Dialog onOpenChange={(open) => {
       if (!open) form.reset();
@@ -679,7 +700,11 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
             </div>
             <div className="space-y-2">
               <Label>Video ID/URL</Label>
-              <Input {...form.register("videoRef")} placeholder="e.g. 123456789" />
+              <Input 
+                {...form.register("videoRef")} 
+                placeholder="e.g. 123456789" 
+                onBlur={(e) => detectDuration(e.target.value)}
+              />
             </div>
             <div className="space-y-2 col-span-2">
               <Label>Description</Label>

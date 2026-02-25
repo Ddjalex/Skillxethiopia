@@ -162,16 +162,45 @@ export async function registerRoutes(
   });
 
   app.get(api.protected.dashboardCourse.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).id;
     const course = await storage.getCourse(Number(req.params.id));
     if (!course) return res.status(404).json({ message: "Not found" });
     
     const seasons = await storage.getSeasonsByCourse(course.id);
     const seasonsWithEpisodes = await Promise.all(seasons.map(async s => {
       const eps = await storage.getEpisodesBySeason(s.id);
+      
+      // Check if season is unlocked
+      const seasonGrant = await db.select().from(accessGrants).where(
+        and(
+          eq(accessGrants.userId, userId),
+          eq(accessGrants.itemType, "SEASON"),
+          eq(accessGrants.itemId, s.id)
+        )
+      ).limit(1);
+      
+      const isSeasonUnlocked = seasonGrant.length > 0;
+
       return {
         ...s,
-        isUnlocked: true,
-        episodes: eps.map(e => ({ ...e, isUnlocked: true }))
+        isUnlocked: isSeasonUnlocked,
+        episodes: await Promise.all(eps.map(async e => {
+          // Check if individual episode is unlocked (either via season or directly)
+          let isEpisodeUnlocked = isSeasonUnlocked || e.isPreview || e.price === "0";
+          
+          if (!isEpisodeUnlocked) {
+            const epGrant = await db.select().from(accessGrants).where(
+              and(
+                eq(accessGrants.userId, userId),
+                eq(accessGrants.itemType, "EPISODE"),
+                eq(accessGrants.itemId, e.id)
+              )
+            ).limit(1);
+            isEpisodeUnlocked = epGrant.length > 0;
+          }
+
+          return { ...e, isUnlocked: isEpisodeUnlocked };
+        }))
       };
     }));
     
@@ -188,21 +217,18 @@ export async function registerRoutes(
       const input = api.protected.buy.input.parse(req.body);
       const userId = (req.user as any).id;
       
+      // For now, we just create a PENDING purchase. 
+      // Admin must approve it to grant access (manually or via a feature we'll add)
       const purchase = await storage.createPurchase({
         userId,
         itemType: input.itemType,
         itemId: input.itemId,
-        amount: "9.99",
+        amount: input.itemType === "SEASON" ? "19.99" : "5.99", // Should ideally fetch from DB
         currency: "USD",
         provider: "MOCK",
       });
       
-      await storage.createAccessGrant({
-        userId,
-        itemType: input.itemType,
-        itemId: input.itemId,
-        grantedBy: "SYSTEM"
-      });
+      // REMOVED automatic access grant. Admin must approve.
       
       res.status(201).json(purchase);
     } catch(err) {
@@ -211,8 +237,43 @@ export async function registerRoutes(
   });
 
   app.get(api.protected.stream.path, requireAuth, async (req, res) => {
-    const episode = await storage.getEpisode(Number(req.params.id));
+    const userId = (req.user as any).id;
+    const episodeId = Number(req.params.id);
+    const episode = await storage.getEpisode(episodeId);
     if (!episode) return res.status(404).json({ message: "Not found" });
+
+      // Verify access before showing video ref
+    let hasAccess = episode.isPreview || episode.price === "0";
+    
+    if (!hasAccess) {
+      // Check episode grant
+      const epGrant = await db.select().from(accessGrants).where(
+        and(
+          eq(accessGrants.userId, userId),
+          eq(accessGrants.itemType, "EPISODE"),
+          eq(accessGrants.itemId, episodeId)
+        )
+      ).limit(1);
+      
+      if (epGrant.length > 0) {
+        hasAccess = true;
+      } else {
+        // Check season grant
+        const seasonGrant = await db.select().from(accessGrants).where(
+          and(
+            eq(accessGrants.userId, userId),
+            eq(accessGrants.itemType, "SEASON"),
+            eq(accessGrants.itemId, episode.seasonId)
+          )
+        ).limit(1);
+        hasAccess = seasonGrant.length > 0;
+      }
+    }
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: "Payment required or pending approval" });
+    }
+
     res.json({ videoProvider: episode.videoProvider, videoRef: episode.videoRef });
   });
 
