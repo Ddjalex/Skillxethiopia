@@ -1,10 +1,11 @@
 import { db } from "./db";
 import {
-  users, categories, courses, seasons, episodes, purchases, accessGrants,
+  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions,
   type User, type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
-  type AccessGrant, type InsertAccessGrant
+  type AccessGrant, type InsertAccessGrant,
+  type PaymentOption, type InsertPaymentOption
 } from "@shared/schema";
 import { eq, or, and, ilike } from "drizzle-orm";
 import session from "express-session";
