@@ -81,6 +81,8 @@ export default function EpisodePlayer() {
                     }
                   }}
                   onError={(e) => console.error("ReactPlayer Error:", e)}
+                  onReady={() => console.log("ReactPlayer Ready")}
+                  onBuffer={() => console.log("ReactPlayer Buffering")}
                 />
               </div>
             ) : (

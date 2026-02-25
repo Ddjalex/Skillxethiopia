@@ -478,7 +478,7 @@ export async function seedDatabase() {
       isPreview: true,
       price: "0",
       videoProvider: "VIMEO",
-      videoRef: "123456789"
+      videoRef: "https://vimeo.com/76979871"
     });
     await storage.createEpisode({
       seasonId: season1.id,
@@ -489,7 +489,7 @@ export async function seedDatabase() {
       isPreview: false,
       price: "150",
       videoProvider: "VIMEO",
-      videoRef: "123456789"
+      videoRef: "https://vimeo.com/76979871"
     });
   }
 }
