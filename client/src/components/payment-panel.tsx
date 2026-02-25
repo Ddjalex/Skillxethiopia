@@ -7,8 +7,7 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SiTelebirr } from "react-icons/si";
-import { CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, Wallet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -57,7 +56,7 @@ export function PaymentPanel({
     { 
       id: "TELEBIRR" as const, 
       name: "Telebirr", 
-      icon: SiTelebirr, 
+      icon: Wallet, 
       color: "text-[#005CAB]",
       number: "0911223344",
       merchantId: "M12345"
