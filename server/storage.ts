@@ -59,6 +59,12 @@ export interface IStorage {
   getAccessGrantsByUser(userId: number): Promise<AccessGrant[]>;
   createAccessGrant(grant: InsertAccessGrant): Promise<AccessGrant>;
   deleteAccessGrant(id: number): Promise<void>;
+
+  // Payment Options
+  getPaymentOptions(): Promise<PaymentOption[]>;
+  createPaymentOption(option: InsertPaymentOption): Promise<PaymentOption>;
+  updatePaymentOption(id: number, option: Partial<InsertPaymentOption>): Promise<PaymentOption>;
+  deletePaymentOption(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -208,6 +214,22 @@ export class DatabaseStorage implements IStorage {
   }
   async deleteAccessGrant(id: number): Promise<void> {
     await db.delete(accessGrants).where(eq(accessGrants.id, id));
+  }
+
+  // Payment Options
+  async getPaymentOptions(): Promise<PaymentOption[]> {
+    return await db.select().from(paymentOptions);
+  }
+  async createPaymentOption(option: InsertPaymentOption): Promise<PaymentOption> {
+    const [created] = await db.insert(paymentOptions).values(option).returning();
+    return created;
+  }
+  async updatePaymentOption(id: number, option: Partial<InsertPaymentOption>): Promise<PaymentOption> {
+    const [updated] = await db.update(paymentOptions).set(option).where(eq(paymentOptions.id, id)).returning();
+    return updated;
+  }
+  async deletePaymentOption(id: number): Promise<void> {
+    await db.delete(paymentOptions).where(eq(paymentOptions.id, id));
   }
 }
 

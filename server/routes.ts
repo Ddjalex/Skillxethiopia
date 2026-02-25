@@ -383,6 +383,27 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
+  // --- Payment Option Routes ---
+  app.get("/api/payment-options", async (req, res) => {
+    const options = await storage.getPaymentOptions();
+    res.json(options);
+  });
+
+  app.post("/api/admin/payment-options", requireAdmin, async (req, res) => {
+    const option = await storage.createPaymentOption(req.body);
+    res.status(201).json(option);
+  });
+
+  app.patch("/api/admin/payment-options/:id", requireAdmin, async (req, res) => {
+    const updated = await storage.updatePaymentOption(Number(req.params.id), req.body);
+    res.json(updated);
+  });
+
+  app.delete("/api/admin/payment-options/:id", requireAdmin, async (req, res) => {
+    await storage.deletePaymentOption(Number(req.params.id));
+    res.status(204).end();
+  });
+
   await seedDatabase();
 
   return httpServer;

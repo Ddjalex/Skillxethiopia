@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, Users, BookOpen, Layers, Plus, 
   Video, Image as ImageIcon, FileText, Settings,
-  Pencil, Trash2
+  Pencil, Trash2, CreditCard
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -51,7 +51,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<"overview" | "courses" | "categories" | "users" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "courses" | "categories" | "users" | "settings" | "payments">("overview");
 
   const { data: users, isLoading: loadingUsers } = useQuery<any[]>({
     queryKey: ["/api/admin/users"],
@@ -114,6 +114,12 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab("users")} 
           />
           <SidebarItem 
+            icon={<CreditCard className="h-4 w-4" />} 
+            label="Payment Options" 
+            active={activeTab === "payments"} 
+            onClick={() => setActiveTab("payments")} 
+          />
+          <SidebarItem 
             icon={<Settings className="h-4 w-4" />} 
             label="Settings" 
             active={activeTab === "settings"} 
@@ -143,6 +149,7 @@ export default function AdminDashboard() {
         {activeTab === "categories" && <CategoryManagement categories={categories || []} />}
         {activeTab === "purchases" && <PurchaseManagement />}
         {activeTab === "users" && <UserManagement users={users || []} />}
+        {activeTab === "payments" && <PaymentManagement />}
         {activeTab === "settings" && <AdminSettings />}
       </div>
     </div>
@@ -217,6 +224,114 @@ function PurchaseManagement() {
           </Table>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function PaymentManagement() {
+  const { toast } = useToast();
+  const { data: options, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/payment-options"],
+  });
+
+  const createOption = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/admin/payment-options", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-options"] });
+      toast({ title: "Success", description: "Payment option added" });
+    }
+  });
+
+  const deleteOption = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/admin/payment-options/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payment-options"] });
+      toast({ title: "Deleted", description: "Payment option removed" });
+    }
+  });
+
+  const form = useForm({
+    defaultValues: {
+      provider: "TELEBIRR",
+      accountName: "",
+      accountNumber: "",
+      merchantId: "",
+      qrCodeUrl: ""
+    }
+  });
+
+  if (isLoading) return <Loader2 className="h-8 w-8 animate-spin" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Payment Options</h2>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button><Plus className="h-4 w-4 mr-2" /> Add Option</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Payment Option</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={form.handleSubmit((data) => createOption.mutate(data))} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Select onValueChange={(v) => form.setValue("provider", v)} defaultValue="TELEBIRR">
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TELEBIRR">Telebirr</SelectItem>
+                    <SelectItem value="CBE_BIRR">CBE Birr</SelectItem>
+                    <SelectItem value="HELLOCASH">HelloCash</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Account Name</Label>
+                <Input {...form.register("accountName")} placeholder="Business Name" />
+              </div>
+              <div className="space-y-2">
+                <Label>Account/Phone Number</Label>
+                <Input {...form.register("accountNumber")} placeholder="0911..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Merchant ID (Optional)</Label>
+                <Input {...form.register("merchantId")} />
+              </div>
+              <div className="space-y-2">
+                <Label>QR Code URL</Label>
+                <Input {...form.register("qrCodeUrl")} placeholder="https://..." />
+              </div>
+              <Button type="submit" className="w-full" disabled={createOption.isPending}>Add Option</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {options?.map((opt) => (
+          <Card key={opt.id}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{opt.provider}</CardTitle>
+              <Button variant="ghost" size="icon" onClick={() => deleteOption.mutate(opt.id)} className="text-destructive">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-lg font-bold">{opt.accountName}</div>
+              <div className="text-sm text-muted-foreground">{opt.accountNumber}</div>
+              {opt.qrCodeUrl && (
+                <img src={opt.qrCodeUrl} className="w-full aspect-square object-contain border rounded mt-2" alt="QR Code" />
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

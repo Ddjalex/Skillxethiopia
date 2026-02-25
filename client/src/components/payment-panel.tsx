@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import telebirrQr from "@assets/image_1772002240311.png";
+import { useQuery } from "@tanstack/react-query";
 
 interface PaymentPanelProps {
   isOpen: boolean;
@@ -32,17 +32,22 @@ export function PaymentPanel({
   isPending 
 }: PaymentPanelProps) {
   const [step, setStep] = useState<"select" | "pay" | "confirm">("select");
-  const [provider, setProvider] = useState<"TELEBIRR" | "CBE_BIRR" | "HELLOCASH" | null>(null);
+  const [selectedOptionId, setSelectedOptionId] = useState<number | null>(null);
   const [transactionRef, setTransactionRef] = useState("");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const { data: paymentOptions, isLoading: loadingOptions } = useQuery<any[]>({
+    queryKey: ["/api/payment-options"],
+    enabled: isOpen
+  });
+
   // Reset state when dialog closes/opens
   useEffect(() => {
     if (!isOpen) {
       setStep("select");
-      setProvider(null);
+      setSelectedOptionId(null);
       setTransactionRef("");
       setPreviewUrl(null);
     }
@@ -64,35 +69,7 @@ export function PaymentPanel({
     }
   };
 
-  const providers = [
-    { 
-      id: "TELEBIRR" as const, 
-      name: "Telebirr", 
-      icon: Wallet, 
-      color: "text-[#005CAB]",
-      number: "0911223344",
-      merchantId: "M12345",
-      qrImage: telebirrQr
-    },
-    { 
-      id: "CBE_BIRR" as const, 
-      name: "CBE Birr", 
-      icon: Smartphone, 
-      color: "text-[#6B2D91]",
-      number: "0922334455",
-      merchantId: "CBE-9876"
-    },
-    { 
-      id: "HELLOCASH" as const, 
-      name: "HelloCash", 
-      icon: CreditCard, 
-      color: "text-[#E31E24]",
-      number: "0933445566",
-      merchantId: "HC-5432"
-    }
-  ];
-
-  const selectedProviderData = providers.find(p => p.id === provider);
+  const selectedOption = paymentOptions?.find(p => p.id === selectedOptionId);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -100,7 +77,7 @@ export function PaymentPanel({
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">
             {step === "select" && "Choose Payment Method"}
-            {step === "pay" && `Pay with ${selectedProviderData?.name}`}
+            {step === "pay" && `Pay with ${selectedOption?.provider}`}
           </DialogTitle>
           <DialogDescription>
             {step === "select" && "Select your preferred payment provider to continue."}
@@ -111,43 +88,48 @@ export function PaymentPanel({
         <div className="py-4">
           {step === "select" && (
             <div className="grid gap-3">
-              {providers.map((p) => (
-                <Button
-                  key={p.id}
-                  variant="outline"
-                  className="h-16 justify-start gap-4 px-4 hover:border-primary hover:bg-primary/5 transition-all"
-                  onClick={() => {
-                    setProvider(p.id);
-                    setStep("pay");
-                  }}
-                >
-                  <p.icon className={`h-8 w-8 ${p.color}`} />
-                  <div className="text-left">
-                    <p className="font-semibold text-lg">{p.name}</p>
-                    <p className="text-xs text-muted-foreground">Instant verification</p>
-                  </div>
-                </Button>
-              ))}
+              {loadingOptions ? (
+                <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+              ) : paymentOptions?.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No payment methods available. Please contact support.</p>
+              ) : (
+                paymentOptions?.map((p) => (
+                  <Button
+                    key={p.id}
+                    variant="outline"
+                    className="h-16 justify-start gap-4 px-4 hover:border-primary hover:bg-primary/5 transition-all"
+                    onClick={() => {
+                      setSelectedOptionId(p.id);
+                      setStep("pay");
+                    }}
+                  >
+                    <div className="text-left">
+                      <p className="font-semibold text-lg">{p.provider}</p>
+                      <p className="text-xs text-muted-foreground">{p.accountName}</p>
+                    </div>
+                  </Button>
+                ))
+              )}
             </div>
           )}
 
-          {step === "pay" && selectedProviderData && (
+          {step === "pay" && selectedOption && (
             <div className="space-y-6">
               <div className="bg-muted/50 rounded-xl p-6 text-center space-y-2 border border-dashed">
                 <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Total Amount</p>
                 <p className="text-4xl font-bold text-primary">{amount} <span className="text-lg font-normal">ETB</span></p>
               </div>
 
-              {selectedProviderData.qrImage && (
+              {selectedOption.qrCodeUrl && (
                 <div className="flex justify-center">
                   <div className="relative group">
                     <img 
-                      src={selectedProviderData.qrImage} 
+                      src={selectedOption.qrCodeUrl} 
                       alt="Payment QR" 
                       className="w-48 h-48 rounded-lg shadow-sm border border-border"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                      <Button size="sm" variant="secondary" onClick={() => window.open(selectedProviderData.qrImage, '_blank')}>
+                      <Button size="sm" variant="secondary" onClick={() => window.open(selectedOption.qrCodeUrl, '_blank')}>
                         <ExternalLink className="h-3 w-3 mr-2" />
                         View Full
                       </Button>
@@ -159,23 +141,32 @@ export function PaymentPanel({
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-3 bg-card border rounded-lg">
                   <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Merchant Number</p>
-                    <p className="font-mono font-bold">{selectedProviderData.number}</p>
+                    <p className="text-xs text-muted-foreground">Account Name</p>
+                    <p className="font-bold">{selectedOption.accountName}</p>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={() => handleCopy(selectedProviderData.number)}>
-                    <Copy className="h-4 w-4" />
-                  </Button>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-card border rounded-lg">
                   <div className="space-y-0.5">
-                    <p className="text-xs text-muted-foreground">Merchant ID</p>
-                    <p className="font-mono font-bold">{selectedProviderData.merchantId}</p>
+                    <p className="text-xs text-muted-foreground">Account Number</p>
+                    <p className="font-mono font-bold">{selectedOption.accountNumber}</p>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={() => handleCopy(selectedProviderData.merchantId)}>
+                  <Button size="icon" variant="ghost" onClick={() => handleCopy(selectedOption.accountNumber)}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
+
+                {selectedOption.merchantId && (
+                  <div className="flex items-center justify-between p-3 bg-card border rounded-lg">
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Merchant ID</p>
+                      <p className="font-mono font-bold">{selectedOption.merchantId}</p>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => handleCopy(selectedOption.merchantId)}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-4 border-t pt-4">

@@ -2,6 +2,21 @@ import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const paymentOptions = pgTable("payment_options", {
+  id: serial("id").primaryKey(),
+  provider: text("provider").notNull(), // TELEBIRR | CBE_BIRR | HELLOCASH
+  accountName: text("account_name").notNull(),
+  accountNumber: text("account_number").notNull(),
+  merchantId: text("merchant_id"),
+  qrCodeUrl: text("qr_code_url"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertPaymentOptionSchema = createInsertSchema(paymentOptions).omit({ id: true, createdAt: true });
+export type PaymentOption = typeof paymentOptions.$inferSelect;
+export type InsertPaymentOption = z.infer<typeof insertPaymentOptionSchema>;
+
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
