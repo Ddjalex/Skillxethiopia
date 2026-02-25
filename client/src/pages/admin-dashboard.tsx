@@ -999,57 +999,6 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
     </Dialog>
   );
 }
-            </div>
-            <div className="space-y-2">
-              <Label>Episode Title</Label>
-              <Input {...form.register("title")} />
-            </div>
-            <div className="space-y-2">
-              <Label>Episode Number</Label>
-              <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Duration (seconds)</Label>
-              <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} />
-            </div>
-            <div className="space-y-2">
-              <Label>Video Provider</Label>
-              <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue="VIMEO">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="VIMEO">Vimeo</SelectItem>
-                  <SelectItem value="YOUTUBE">YouTube</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Video ID/URL</Label>
-              <Input 
-                {...form.register("videoRef")} 
-                placeholder="e.g. 123456789" 
-                onBlur={(e) => detectDuration(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2 col-span-2">
-              <Label>Description</Label>
-              <Textarea {...form.register("description")} />
-            </div>
-            <Button type="submit" className="w-full col-span-2" disabled={createEpisode.isPending}>
-              {createEpisode.isPending ? "Adding..." : "Add Episode"}
-            </Button>
-          </form>
-        ) : (
-          <div className="text-center p-8 space-y-4">
-            <p className="text-muted-foreground">This course has no seasons yet. Please add a season first.</p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 function AdminSettings() {
   const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState("");
