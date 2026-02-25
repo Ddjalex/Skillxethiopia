@@ -1,6 +1,15 @@
 import { CreditCard, Smartphone, CheckCircle2, Copy, ExternalLink, Loader2, Wallet, Upload, Image as ImageIcon } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import telebirrQr from "@assets/image_1772002240311.png";
 
 interface PaymentPanelProps {
