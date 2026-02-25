@@ -72,7 +72,7 @@ export default function EpisodePlayer() {
                 <ReactPlayer 
                   url={streamData.videoProvider === "VIMEO" 
                     ? (streamData.videoRef.startsWith("http") 
-                        ? streamData.videoRef.split('?')[0] 
+                        ? streamData.videoRef
                         : `https://vimeo.com/${streamData.videoRef}`)
                     : streamData.videoProvider === "YOUTUBE"
                       ? (streamData.videoRef.startsWith("http") 
