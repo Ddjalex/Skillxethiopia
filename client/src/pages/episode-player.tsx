@@ -57,7 +57,7 @@ export default function EpisodePlayer() {
                 <AlertCircle className="w-12 h-12 text-destructive mb-4" />
                 <h3 className="text-xl font-bold mb-2">Video Playback Error</h3>
                 <p className="text-muted-foreground max-w-md">
-                  {playerError}. Please ensure the video reference is a valid Vimeo/YouTube video ID or URL, and that the video is not private.
+                  {playerError}. Please ensure the video reference is a valid Vimeo/YouTube video ID or URL. If you are using a Vimeo link, try using just the numeric ID.
                 </p>
                 <Button 
                   variant="outline" 
@@ -108,7 +108,6 @@ export default function EpisodePlayer() {
                     console.log("ReactPlayer Ready");
                     setPlayerError(null);
                   }}
-                  onBuffer={() => console.log("ReactPlayer Buffering")}
                 />
               </div>
             ) : (
