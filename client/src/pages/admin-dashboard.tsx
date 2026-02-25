@@ -297,7 +297,7 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: { fileIn
             <form onSubmit={form.handleSubmit((data) => createOption.mutate(data))} className="space-y-4">
               <div className="space-y-2">
                 <Label>Provider</Label>
-                <Select onValueChange={(v) => form.setValue("provider", v)} defaultValue="TELEBIRR">
+                <Select onValueChange={(v) => form.setValue("provider", v)} defaultValue={form.getValues("provider")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="TELEBIRR">Telebirr</SelectItem>

@@ -390,13 +390,23 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/payment-options", requireAdmin, async (req, res) => {
-    const option = await storage.createPaymentOption(req.body);
-    res.status(201).json(option);
+    try {
+      const option = await storage.createPaymentOption(req.body);
+      res.status(201).json(option);
+    } catch (err) {
+      console.error("Error creating payment option:", err);
+      res.status(500).json({ message: "Failed to create payment option" });
+    }
   });
 
   app.patch("/api/admin/payment-options/:id", requireAdmin, async (req, res) => {
-    const updated = await storage.updatePaymentOption(Number(req.params.id), req.body);
-    res.json(updated);
+    try {
+      const updated = await storage.updatePaymentOption(Number(req.params.id), req.body);
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating payment option:", err);
+      res.status(500).json({ message: "Failed to update payment option" });
+    }
   });
 
   app.delete("/api/admin/payment-options/:id", requireAdmin, async (req, res) => {
