@@ -5,6 +5,8 @@ import { Loader2, PlayCircle, Lock } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
+import { PaymentPanel } from "@/components/payment-panel";
+import { useState } from "react";
 
 export default function DashboardCourse() {
   const [, params] = useRoute("/dashboard/course/:id");
@@ -13,14 +15,59 @@ export default function DashboardCourse() {
   const { data, isLoading } = useDashboardCourse(id);
   const buyMutation = useBuyItem();
 
+  const [paymentState, setPaymentState] = useState<{
+    isOpen: boolean;
+    itemType: "SEASON" | "EPISODE" | null;
+    itemId: number | null;
+    amount: string;
+  }>({
+    isOpen: false,
+    itemType: null,
+    itemId: null,
+    amount: ""
+  });
+
   if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
   if (!data) return <div>Not found</div>;
 
   const { course, seasons } = data;
 
+  const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
+    setPaymentState({
+      isOpen: true,
+      itemType,
+      itemId,
+      amount
+    });
+  };
+
+  const handlePaymentConfirm = (transactionRef: string) => {
+    if (!paymentState.itemType || !paymentState.itemId) return;
+    
+    buyMutation.mutate({ 
+      itemType: paymentState.itemType, 
+      itemId: paymentState.itemId, 
+      amount: paymentState.amount,
+    }, {
+      onSuccess: () => {
+        setPaymentState(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      <PaymentPanel 
+        isOpen={paymentState.isOpen}
+        onClose={() => setPaymentState(prev => ({ ...prev, isOpen: false }))}
+        itemType={paymentState.itemType || "SEASON"}
+        itemId={paymentState.itemId || 0}
+        amount={paymentState.amount}
+        onConfirm={handlePaymentConfirm}
+        isPending={buyMutation.isPending}
+      />
       
       <div className="bg-muted/30 border-b border-border py-12">
         <div className="container mx-auto px-4">
@@ -53,7 +100,7 @@ export default function DashboardCourse() {
                         size="sm" 
                         onClick={(e) => {
                           e.stopPropagation();
-                          buyMutation.mutate({ itemType: "SEASON", itemId: season.id });
+                          handleBuyInitiate("SEASON", season.id, season.price);
                         }}
                         disabled={buyMutation.isPending}
                       >
@@ -95,7 +142,7 @@ export default function DashboardCourse() {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => buyMutation.mutate({ itemType: "EPISODE", itemId: ep.id })}
+                            onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
                             disabled={buyMutation.isPending}
                           >
                             <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})

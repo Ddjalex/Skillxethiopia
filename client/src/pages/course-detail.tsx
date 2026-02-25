@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/accordion";
 import { Loader2, Lock, Play, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { Link, useRoute } from "wouter";
+import { PaymentPanel } from "@/components/payment-panel";
+import { useState } from "react";
 
 export default function CourseDetailPage() {
   const [, params] = useRoute("/course/:slug");
@@ -20,6 +22,18 @@ export default function CourseDetailPage() {
   const { data, isLoading } = useCourseDetail(slug);
   const { user } = useAuth();
   const buyMutation = useBuyItem();
+
+  const [paymentState, setPaymentState] = useState<{
+    isOpen: boolean;
+    itemType: "SEASON" | "EPISODE" | null;
+    itemId: number | null;
+    amount: string;
+  }>({
+    isOpen: false,
+    itemType: null,
+    itemId: null,
+    amount: ""
+  });
 
   if (isLoading) {
     return (
@@ -36,17 +50,47 @@ export default function CourseDetailPage() {
 
   const { course, seasons, category } = data;
 
-  const handleBuy = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
+  const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) {
       window.location.href = "/auth";
       return;
     }
-    buyMutation.mutate({ itemType, itemId, amount });
+    setPaymentState({
+      isOpen: true,
+      itemType,
+      itemId,
+      amount
+    });
+  };
+
+  const handlePaymentConfirm = (transactionRef: string) => {
+    if (!paymentState.itemType || !paymentState.itemId) return;
+    
+    buyMutation.mutate({ 
+      itemType: paymentState.itemType, 
+      itemId: paymentState.itemId, 
+      amount: paymentState.amount,
+      // We should ideally pass transactionRef to backend too
+    }, {
+      onSuccess: () => {
+        setPaymentState(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+
+      <PaymentPanel 
+        isOpen={paymentState.isOpen}
+        onClose={() => setPaymentState(prev => ({ ...prev, isOpen: false }))}
+        itemType={paymentState.itemType || "SEASON"}
+        itemId={paymentState.itemId || 0}
+        amount={paymentState.amount}
+        onConfirm={handlePaymentConfirm}
+        isPending={buyMutation.isPending}
+      />
 
       {/* Hero Header */}
       <div className="bg-muted/30 border-b border-border">
@@ -134,7 +178,7 @@ export default function CourseDetailPage() {
                         size="sm" 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleBuy("SEASON", season.id, season.price);
+                          handleBuyInitiate("SEASON", season.id, season.price);
                         }}
                         disabled={buyMutation.isPending}
                       >
@@ -174,7 +218,7 @@ export default function CourseDetailPage() {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => handleBuy("EPISODE", ep.id, ep.price)}
+                              onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
                               disabled={buyMutation.isPending}
                             >
                               <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price} ETB)
