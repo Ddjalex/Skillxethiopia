@@ -1166,7 +1166,14 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
     if (!url) return;
     try {
       if (videoProvider === "VIMEO") {
-        const videoId = url.split("/").pop()?.split("?")[0];
+        let videoId = "";
+        if (url.includes("vimeo.com/")) {
+          const parts = url.split("vimeo.com/")[1].split("?")[0].split("/");
+          videoId = parts[0];
+        } else {
+          videoId = url.split("?")[0];
+        }
+        
         if (!videoId || isNaN(Number(videoId))) return;
         const res = await fetch(`https://vimeo.com/api/v2/video/${videoId}.json`);
         const data = await res.json();

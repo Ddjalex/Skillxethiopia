@@ -40,7 +40,7 @@ export default function VideoOnlyPage() {
             <AlertCircle className="h-16 w-16 text-destructive mb-6" />
             <h2 className="text-2xl font-bold mb-4">Playback Error</h2>
             <p className="text-muted-foreground max-w-xl mb-8 text-lg">
-              {playerError}. If this is a Vimeo video, please check if it's a video ID or a user profile. User profile URLs may not be supported as direct video sources.
+              {playerError}. If this is a Vimeo video, please check if it's a video ID or a direct link. Ensure the video is not restricted or private without the correct access hash.
             </p>
             <Button 
               variant="outline" 
@@ -53,7 +53,11 @@ export default function VideoOnlyPage() {
         ) : (
           <ReactPlayer
             url={data.videoProvider === "VIMEO" 
-              ? (data.videoRef.startsWith("http") ? data.videoRef.split('?')[0] : `https://vimeo.com/${data.videoRef}`)
+              ? (data.videoRef.startsWith("http") 
+                  ? data.videoRef 
+                  : data.videoRef.includes("vimeo.com")
+                    ? `https://${data.videoRef.replace(/^https?:\/\//, "")}`
+                    : `https://vimeo.com/${data.videoRef}`)
               : data.videoProvider === "YOUTUBE"
                 ? (data.videoRef.startsWith("http") ? data.videoRef : `https://www.youtube.com/watch?v=${data.videoRef}`)
                 : data.videoRef

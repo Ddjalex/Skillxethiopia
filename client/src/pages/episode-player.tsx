@@ -73,7 +73,9 @@ export default function EpisodePlayer() {
                   url={streamData.videoProvider === "VIMEO" 
                     ? (streamData.videoRef.startsWith("http") 
                         ? streamData.videoRef
-                        : `https://vimeo.com/${streamData.videoRef}`)
+                        : streamData.videoRef.includes("vimeo.com")
+                          ? `https://${streamData.videoRef.replace(/^https?:\/\//, "")}`
+                          : `https://vimeo.com/${streamData.videoRef}`)
                     : streamData.videoProvider === "YOUTUBE"
                       ? (streamData.videoRef.startsWith("http") 
                           ? streamData.videoRef 
