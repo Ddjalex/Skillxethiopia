@@ -1167,19 +1167,26 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
     try {
       if (videoProvider === "VIMEO") {
         let videoId = "";
-        if (url.includes("vimeo.com/")) {
-          const parts = url.split("vimeo.com/")[1].split("?")[0].split("/");
-          videoId = parts[0];
-        } else {
-          videoId = url.split("?")[0];
-        }
+        // Extract ID from various Vimeo formats
+        const vimeoRegex = /(?:vimeo\.com\/|player\.vimeo\.com\/video\/|vimeo\.com\/channels\/.+\/|vimeo\.com\/groups\/.+\/videos\/|vimeo\.com\/manage\/videos\/)([0-9]+)/;
+        const match = url.match(vimeoRegex);
         
-        if (!videoId || isNaN(Number(videoId))) return;
-        const res = await fetch(`https://vimeo.com/api/v2/video/${videoId}.json`);
+        if (match) {
+          videoId = match[1];
+        } else if (/^[0-9]+$/.test(url)) {
+          videoId = url;
+        }
+
+        if (!videoId) return;
+        
+        // Use OEmbed API which is more reliable for duration and metadata
+        const res = await fetch(`https://vimeo.com/api/oembed.json?url=https://vimeo.com/${videoId}`);
+        if (!res.ok) return;
         const data = await res.json();
-        if (data && data[0] && data[0].duration) {
-          form.setValue("durationSec", data[0].duration);
-          toast({ title: "Duration Detected", description: `${Math.round(data[0].duration / 60)} minutes detected.` });
+        
+        if (data && data.duration) {
+          form.setValue("durationSec", data.duration);
+          toast({ title: "Duration Detected", description: `${Math.round(data.duration / 60)} minutes detected.` });
         }
       }
     } catch (e) {
