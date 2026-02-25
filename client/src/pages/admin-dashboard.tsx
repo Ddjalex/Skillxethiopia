@@ -495,6 +495,29 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
                   <Button type="button" variant="outline" size="icon"><ImageIcon className="h-4 w-4" /></Button>
                 </div>
               </div>
+              <div className="space-y-2">
+                <Label>Duration (Seconds)</Label>
+                <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} placeholder="e.g. 600" />
+              </div>
+              <div className="space-y-2">
+                <Label>Video Provider</Label>
+                <Select onValueChange={(v) => form.setValue("videoProvider", v)} defaultValue={form.getValues("videoProvider")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VIMEO">Vimeo</SelectItem>
+                    <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                    <SelectItem value="URL">Direct URL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Video Reference (ID or URL)</Label>
+                <Input {...form.register("videoRef")} placeholder="e.g. 123456789" />
+              </div>
+              <div className="flex items-center gap-2 py-2">
+                <input type="checkbox" id="isPreview" {...form.register("isPreview")} className="rounded border-gray-300" />
+                <Label htmlFor="isPreview">Is Preview Episode?</Label>
+              </div>
               <DialogFooter className="col-span-2">
                 <Button type="submit" disabled={createCourse.isPending}>
                   {createCourse.isPending ? "Creating..." : "Create Course"}

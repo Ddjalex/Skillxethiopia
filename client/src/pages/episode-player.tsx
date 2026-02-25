@@ -54,7 +54,10 @@ export default function EpisodePlayer() {
             {streamData ? (
               <div className="w-full h-full">
                 <ReactPlayer 
-                  url={streamData.videoRef} 
+                  url={streamData.videoProvider === "VIMEO" 
+                    ? `https://vimeo.com/${streamData.videoRef}` 
+                    : streamData.videoRef
+                  } 
                   width="100%" 
                   height="100%" 
                   controls 

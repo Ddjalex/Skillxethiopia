@@ -241,7 +241,11 @@ export default function CourseDetailPage() {
                               {ep.title}
                               {ep.isPreview && <Badge variant="secondary" className="text-[10px] h-4">Preview</Badge>}
                             </p>
-                            <p className="text-xs text-muted-foreground">{Math.floor(ep.durationSec / 60)} mins</p>
+                            <p className="text-xs text-muted-foreground">
+                              {ep.durationSec >= 60 
+                                ? `${Math.floor(ep.durationSec / 60)} mins` 
+                                : `${ep.durationSec} secs`}
+                            </p>
                           </div>
                         </div>
 
