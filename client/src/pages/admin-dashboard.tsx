@@ -102,6 +102,12 @@ export default function AdminDashboard() {
             onClick={() => setActiveTab("categories")} 
           />
           <SidebarItem 
+            icon={<FileText className="h-4 w-4" />} 
+            label="Purchases" 
+            active={activeTab === "purchases"} 
+            onClick={() => setActiveTab("purchases")} 
+          />
+          <SidebarItem 
             icon={<Users className="h-4 w-4" />} 
             label="Users" 
             active={activeTab === "users"} 
@@ -135,9 +141,72 @@ export default function AdminDashboard() {
 
         {activeTab === "courses" && <CourseManagement courses={courses || []} categories={categories || []} />}
         {activeTab === "categories" && <CategoryManagement categories={categories || []} />}
+        {activeTab === "purchases" && <PurchaseManagement />}
         {activeTab === "users" && <UserManagement users={users || []} />}
         {activeTab === "settings" && <AdminSettings />}
       </div>
+    </div>
+  );
+}
+
+function PurchaseManagement() {
+  const { toast } = useToast();
+  const { data: purchases, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/purchases"],
+  });
+
+  const approvePurchase = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/purchases/${id}/approve`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/purchases"] });
+      toast({ title: "Approved", description: "Purchase approved and access granted." });
+    }
+  });
+
+  if (isLoading) return <Loader2 className="h-8 w-8 animate-spin" />;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Purchase Approvals</h2>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {purchases?.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell>{p.user?.name} ({p.user?.email})</TableCell>
+                  <TableCell>{p.itemType} #{p.itemId}</TableCell>
+                  <TableCell>{p.amount} {p.currency}</TableCell>
+                  <TableCell>
+                    <Badge variant={p.status === "PAID" ? "default" : "secondary"}>
+                      {p.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {p.status === "PENDING" && (
+                      <Button size="sm" onClick={() => approvePurchase.mutate(p.id)} disabled={approvePurchase.isPending}>
+                        Approve
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

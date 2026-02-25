@@ -353,6 +353,38 @@ export async function registerRoutes(
     res.status(204).end();
   });
 
+  app.get("/api/admin/purchases", requireAdmin, async (req, res) => {
+    const allPurchases = await db.select({
+      purchase: purchases,
+      user: users,
+    })
+    .from(purchases)
+    .leftJoin(users, eq(purchases.userId, users.id));
+    
+    res.json(allPurchases.map(r => ({ ...r.purchase, user: r.user ? { name: r.user.name, email: r.user.email } : null })));
+  });
+
+  app.post("/api/admin/purchases/:id/approve", requireAdmin, async (req, res) => {
+    const purchaseId = Number(req.params.id);
+    const [purchase] = await db.select().from(purchases).where(eq(purchases.id, purchaseId)).limit(1);
+    
+    if (!purchase) return res.status(404).json({ message: "Purchase not found" });
+    if (purchase.status !== "PENDING") return res.status(400).json({ message: "Already processed" });
+
+    // Update status
+    await db.update(purchases).set({ status: "PAID" }).where(eq(purchases.id, purchaseId));
+
+    // Grant access
+    await storage.createAccessGrant({
+      userId: purchase.userId,
+      itemType: purchase.itemType,
+      itemId: purchase.itemId,
+      grantedBy: "ADMIN"
+    });
+
+    res.json({ success: true });
+  });
+
   await seedDatabase();
 
   return httpServer;
