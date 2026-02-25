@@ -101,12 +101,10 @@ export function PaymentPanel({
           <DialogTitle className="text-2xl font-bold">
             {step === "select" && "Choose Payment Method"}
             {step === "pay" && `Pay with ${selectedProviderData?.name}`}
-            {step === "confirm" && "Confirm Payment"}
           </DialogTitle>
           <DialogDescription>
             {step === "select" && "Select your preferred payment provider to continue."}
-            {step === "pay" && `Send the exact amount to the merchant details below.`}
-            {step === "confirm" && "Enter your transaction reference and upload a screenshot to complete the purchase."}
+            {step === "pay" && `Send the exact amount to the merchant details below. Then enter your transaction reference and upload a screenshot to complete the purchase.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,65 +178,59 @@ export function PaymentPanel({
                 </div>
               </div>
 
+              <div className="space-y-4 border-t pt-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Transaction Reference / ID</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1234567890"
+                    className="w-full p-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary outline-none font-mono"
+                    value={transactionRef}
+                    onChange={(e) => setTransactionRef(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Payment Screenshot</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                  />
+                  
+                  {!previewUrl ? (
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-32 border-dashed flex flex-col gap-2"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Click to upload screenshot</span>
+                    </Button>
+                  ) : (
+                    <div className="relative group aspect-video bg-muted rounded-lg overflow-hidden border">
+                      <img src={previewUrl} alt="Screenshot preview" className="w-full h-full object-contain" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                          Change
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => setPreviewUrl(null)}>
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-start gap-3 p-4 bg-primary/5 rounded-lg border border-primary/20">
                 <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                 <p className="text-sm leading-relaxed">
-                  After payment, you will receive a 10-digit transaction ID. Keep it ready for the next step.
+                  After payment, enter your 10-digit transaction ID and upload the screenshot above to complete the purchase.
                 </p>
               </div>
-            </div>
-          )}
-
-          {step === "confirm" && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Transaction Reference / ID</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 1234567890"
-                  className="w-full p-3 bg-background border rounded-lg focus:ring-2 focus:ring-primary outline-none font-mono"
-                  value={transactionRef}
-                  onChange={(e) => setTransactionRef(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Payment Screenshot (Optional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                />
-                
-                {!previewUrl ? (
-                  <Button 
-                    variant="outline" 
-                    className="w-full h-32 border-dashed flex flex-col gap-2"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">Click to upload screenshot</span>
-                  </Button>
-                ) : (
-                  <div className="relative group aspect-video bg-muted rounded-lg overflow-hidden border">
-                    <img src={previewUrl} alt="Screenshot preview" className="w-full h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-                        Change
-                      </Button>
-                      <Button size="sm" variant="destructive" onClick={() => setPreviewUrl(null)}>
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <p className="text-xs text-muted-foreground bg-muted p-3 rounded">
-                Note: Our team will verify this reference. Once verified, the content will be automatically unlocked in your dashboard.
-              </p>
             </div>
           )}
         </div>
@@ -247,15 +239,9 @@ export function PaymentPanel({
           {step === "pay" && (
             <>
               <Button variant="ghost" className="flex-1" onClick={() => setStep("select")}>Back</Button>
-              <Button className="flex-1" onClick={() => setStep("confirm")}>I have Paid</Button>
-            </>
-          )}
-          {step === "confirm" && (
-            <>
-              <Button variant="ghost" className="flex-1" onClick={() => setStep("pay")}>Back</Button>
               <Button 
                 className="flex-1" 
-                disabled={!transactionRef || isPending}
+                disabled={!transactionRef || !previewUrl || isPending}
                 onClick={() => onConfirm(transactionRef, previewUrl || undefined)}
               >
                 {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Submit Proof"}
