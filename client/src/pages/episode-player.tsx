@@ -1,6 +1,6 @@
 import { Navbar } from "@/components/layout-nav";
 import { useEpisodeStream, useDashboardCourse } from "@/hooks/use-courses";
-import { Loader2, ChevronLeft, ChevronRight, Menu } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, Menu, AlertCircle } from "lucide-react";
 import { useRoute, Link } from "wouter";
 import ReactPlayer from "react-player";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ export default function EpisodePlayer() {
   const { data: courseData } = useDashboardCourse(courseId);
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [playerError, setPlayerError] = useState<string | null>(null);
 
   // Find current episode index to determine next/prev
   let currentEpIndex = -1;
@@ -51,7 +52,22 @@ export default function EpisodePlayer() {
         <div className="flex-1 flex flex-col bg-black overflow-y-auto">
           {/* Video Player Container */}
           <div className="w-full aspect-video bg-black relative shadow-2xl z-10">
-            {streamData ? (
+            {playerError ? (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white p-4 text-center">
+                <AlertCircle className="w-12 h-12 text-destructive mb-4" />
+                <h3 className="text-xl font-bold mb-2">Video Playback Error</h3>
+                <p className="text-muted-foreground max-w-md">
+                  {playerError}. Please ensure the video reference is a valid Vimeo/YouTube video ID or URL, and that the video is not private.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4 border-white/20 text-white hover:bg-white/10"
+                  onClick={() => setPlayerError(null)}
+                >
+                  Try Again
+                </Button>
+              </div>
+            ) : streamData ? (
               <div className="w-full h-full">
                 <ReactPlayer 
                   url={streamData.videoProvider === "VIMEO" 
@@ -84,8 +100,14 @@ export default function EpisodePlayer() {
                       playerVars: { showinfo: 1, autoplay: 0 }
                     }
                   }}
-                  onError={(e) => console.error("ReactPlayer Error:", e)}
-                  onReady={() => console.log("ReactPlayer Ready")}
+                  onError={(e) => {
+                    console.error("ReactPlayer Error:", e);
+                    setPlayerError("Failed to load the video. This could be due to an invalid video ID, privacy settings, or a connection issue.");
+                  }}
+                  onReady={() => {
+                    console.log("ReactPlayer Ready");
+                    setPlayerError(null);
+                  }}
                   onBuffer={() => console.log("ReactPlayer Buffering")}
                 />
               </div>
