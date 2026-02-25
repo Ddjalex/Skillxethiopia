@@ -781,7 +781,7 @@ function CourseManagement({ courses, categories }: { courses: any[], categories:
                         <div className="flex gap-2">
                           <CourseContentDialog courseId={course.id} />
                           <AddSeasonDialog courseId={course.id} />
-                          <AddEpisodeDialog courseId={course.id} />
+                          <AddEpisodeDialog courseId={course.id} seasons={categories.find(c => c.id === course.categoryId)?.courses?.find((cc: any) => cc.id === course.id)?.seasons} />
                           <EditCourseDialog course={course} categories={categories} />
                           <DeleteConfirmDialog 
                             type="course" 
@@ -1081,11 +1081,12 @@ function UserManagement({ users }: { users: any[] }) {
   );
 }
 
-function AddEpisodeDialog({ courseId }: { courseId: number }) {
+function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: number, seasons?: any[] }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const { data: seasons, isLoading: loadingSeasons } = useQuery<any[]>({
     queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
+    enabled: !initialSeasons,
     queryFn: async () => {
       const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
       if (!res.ok) throw new Error("Failed to fetch seasons");
@@ -1093,6 +1094,8 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
       return data.seasons || [];
     }
   });
+
+  const displaySeasons = initialSeasons || seasons;
 
   const createEpisode = useMutation({
     mutationFn: async (data: any) => {
@@ -1154,11 +1157,11 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
         <DialogHeader>
           <DialogTitle>Add Episode</DialogTitle>
         </DialogHeader>
-        {loadingSeasons ? (
+        {loadingSeasons && !initialSeasons ? (
           <div className="flex justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : seasons && seasons.length > 0 ? (
+        ) : displaySeasons && displaySeasons.length > 0 ? (
           <form onSubmit={form.handleSubmit((data) => createEpisode.mutate(data))} className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Season</Label>
@@ -1167,7 +1170,7 @@ function AddEpisodeDialog({ courseId }: { courseId: number }) {
                   <SelectValue placeholder="Select Season" />
                 </SelectTrigger>
                 <SelectContent>
-                  {seasons.map(s => (
+                  {displaySeasons.map(s => (
                     <SelectItem key={s.id} value={s.id.toString()}>
                       Season {s.seasonNumber}: {s.title}
                     </SelectItem>
