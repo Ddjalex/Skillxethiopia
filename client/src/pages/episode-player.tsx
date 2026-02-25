@@ -97,7 +97,11 @@ export default function EpisodePlayer() {
                       } 
                     },
                     youtube: {
-                      playerVars: { showinfo: 1, autoplay: 0 }
+                      embedOptions: {
+                        autoplay: 0,
+                        modestbranding: 1,
+                        rel: 0
+                      }
                     }
                   }}
                   onError={(e) => {
