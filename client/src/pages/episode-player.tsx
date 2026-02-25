@@ -55,9 +55,13 @@ export default function EpisodePlayer() {
               <div className="w-full h-full">
                 <ReactPlayer 
                   url={streamData.videoProvider === "VIMEO" 
-                    ? (streamData.videoRef.startsWith("http") ? streamData.videoRef : `https://vimeo.com/${streamData.videoRef}`)
+                    ? (streamData.videoRef.startsWith("http") 
+                        ? streamData.videoRef 
+                        : `https://vimeo.com/${streamData.videoRef}`)
                     : streamData.videoProvider === "YOUTUBE"
-                      ? (streamData.videoRef.startsWith("http") ? streamData.videoRef : `https://www.youtube.com/watch?v=${streamData.videoRef}`)
+                      ? (streamData.videoRef.startsWith("http") 
+                          ? streamData.videoRef 
+                          : `https://www.youtube.com/watch?v=${streamData.videoRef}`)
                       : streamData.videoRef
                   } 
                   width="100%" 
@@ -70,7 +74,7 @@ export default function EpisodePlayer() {
                         responsive: true,
                         autoplay: false,
                         muted: false,
-                        dnt: true,
+                        dnt: false,
                         title: true,
                         byline: true,
                         portrait: true
