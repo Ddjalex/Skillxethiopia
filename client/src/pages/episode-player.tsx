@@ -63,12 +63,12 @@ export default function EpisodePlayer() {
                   width="100%" 
                   height="100%" 
                   controls 
-                  playing={true}
+                  playing={false}
                   config={{
                     vimeo: { 
                       playerOptions: { 
                         responsive: true,
-                        autoplay: true,
+                        autoplay: false,
                         muted: false,
                         dnt: true,
                         title: true,
@@ -77,7 +77,7 @@ export default function EpisodePlayer() {
                       } 
                     },
                     youtube: {
-                      playerVars: { showinfo: 1, autoplay: 1 }
+                      playerVars: { showinfo: 1, autoplay: 0 }
                     }
                   }}
                   onError={(e) => console.error("ReactPlayer Error:", e)}
