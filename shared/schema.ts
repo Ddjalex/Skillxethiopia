@@ -58,10 +58,11 @@ export const purchases = pgTable("purchases", {
   itemType: text("item_type").notNull(), // SEASON | EPISODE
   itemId: integer("item_id").notNull(),
   amount: text("amount").notNull(),
-  currency: text("currency").notNull().default("USD"),
-  provider: text("provider").notNull().default("MOCK"),
+  currency: text("currency").notNull().default("ETB"),
+  provider: text("provider").notNull().default("TELEBIRR"), // TELEBIRR | CBE_BIRR | HELLOCASH
   status: text("status").notNull().default("PENDING"), // PENDING | PAID | FAILED | REFUNDED
   transactionRef: text("transaction_ref"),
+  paymentProofUrl: text("payment_proof_url"), // For manual verification/screenshot
   createdAt: timestamp("created_at").defaultNow(),
 });
 

@@ -97,11 +97,11 @@ export function useBuyItem() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: async ({ itemType, itemId }: { itemType: "SEASON" | "EPISODE", itemId: number }) => {
+    mutationFn: async ({ itemType, itemId, amount }: { itemType: "SEASON" | "EPISODE", itemId: number, amount: string }) => {
       const res = await fetch(api.protected.buy.path, {
         method: api.protected.buy.method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itemType, itemId }),
+        body: JSON.stringify({ itemType, itemId, amount }),
       });
       
       if (!res.ok) {

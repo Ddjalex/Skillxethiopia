@@ -214,18 +214,16 @@ export async function registerRoutes(
 
   app.post(api.protected.buy.path, requireAuth, async (req, res) => {
     try {
-      const input = api.protected.buy.input.parse(req.body);
+      const input = req.body;
       const userId = (req.user as any).id;
       
-      // For now, we just create a PENDING purchase. 
-      // Admin must approve it to grant access (manually or via a feature we'll add)
       const purchase = await storage.createPurchase({
         userId,
         itemType: input.itemType,
         itemId: input.itemId,
-        amount: input.itemType === "SEASON" ? "19.99" : "5.99", // Should ideally fetch from DB
-        currency: "USD",
-        provider: "MOCK",
+        amount: input.amount || (input.itemType === "SEASON" ? "19.99" : "5.99"),
+        currency: "ETB",
+        provider: "TELEBIRR",
       });
       
       // REMOVED automatic access grant. Admin must approve.
@@ -413,7 +411,7 @@ export async function seedDatabase() {
       courseId: course1.id,
       title: "Getting Started",
       seasonNumber: 1,
-      price: "19.99"
+      price: "500"
     });
 
     await storage.createEpisode({
@@ -434,7 +432,7 @@ export async function seedDatabase() {
       description: "Install Node and VSCode",
       durationSec: 600,
       isPreview: false,
-      price: "5.99",
+      price: "150",
       videoProvider: "VIMEO",
       videoRef: "123456789"
     });

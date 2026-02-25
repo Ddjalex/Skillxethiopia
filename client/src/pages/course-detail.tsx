@@ -36,12 +36,12 @@ export default function CourseDetailPage() {
 
   const { course, seasons, category } = data;
 
-  const handleBuy = (itemType: "SEASON" | "EPISODE", itemId: number) => {
+  const handleBuy = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) {
       window.location.href = "/auth";
       return;
     }
-    buyMutation.mutate({ itemType, itemId });
+    buyMutation.mutate({ itemType, itemId, amount });
   };
 
   return (
@@ -134,11 +134,11 @@ export default function CourseDetailPage() {
                         size="sm" 
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleBuy("SEASON", season.id);
+                          handleBuy("SEASON", season.id, season.price);
                         }}
                         disabled={buyMutation.isPending}
                       >
-                        Buy Season ({season.price})
+                        Buy Season ({season.price} ETB)
                       </Button>
                     </div>
                   </div>
@@ -174,10 +174,10 @@ export default function CourseDetailPage() {
                             <Button 
                               size="sm" 
                               variant="outline" 
-                              onClick={() => handleBuy("EPISODE", ep.id)}
+                              onClick={() => handleBuy("EPISODE", ep.id, ep.price)}
                               disabled={buyMutation.isPending}
                             >
-                              <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
+                              <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price} ETB)
                             </Button>
                           )}
                         </div>
