@@ -63,8 +63,12 @@ export default function EpisodePlayer() {
                     vimeo: { 
                       playerOptions: { 
                         responsive: true,
-                        autoplay: false
+                        autoplay: false,
+                        dnt: true
                       } 
+                    },
+                    youtube: {
+                      playerVars: { showinfo: 1 }
                     }
                   }}
                 />

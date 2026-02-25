@@ -112,7 +112,10 @@ export function useBuyItem() {
       return api.protected.buy.responses[201].parse(await res.json());
     },
     onSuccess: () => {
-      toast({ title: "Purchase successful!", description: "Content is now unlocked." });
+      toast({ 
+        title: "Order Placed", 
+        description: "Your request is pending admin approval. Content will unlock once approved." 
+      });
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboard.path] });
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path] });
       queryClient.invalidateQueries({ queryKey: [api.protected.purchases.path] });

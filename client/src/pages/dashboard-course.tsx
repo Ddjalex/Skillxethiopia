@@ -45,16 +45,21 @@ export default function DashboardCourse() {
                     Season {season.seasonNumber}: {season.title}
                   </span>
                   {!season.isUnlocked && (
-                    <Button 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        buyMutation.mutate({ itemType: "SEASON", itemId: season.id });
-                      }}
-                      disabled={buyMutation.isPending}
-                    >
-                      Unlock Season ({season.price})
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-orange-500 border-orange-500">
+                        Pending Approval
+                      </Badge>
+                      <Button 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          buyMutation.mutate({ itemType: "SEASON", itemId: season.id });
+                        }}
+                        disabled={buyMutation.isPending}
+                      >
+                        Unlock Season ({season.price})
+                      </Button>
+                    </div>
                   )}
                 </div>
               </AccordionTrigger>
@@ -83,14 +88,19 @@ export default function DashboardCourse() {
                           </Button>
                         </Link>
                       ) : (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => buyMutation.mutate({ itemType: "EPISODE", itemId: ep.id })}
-                          disabled={buyMutation.isPending}
-                        >
-                          <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-orange-500 border-orange-500">
+                            Pending Approval
+                          </Badge>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => buyMutation.mutate({ itemType: "EPISODE", itemId: ep.id })}
+                            disabled={buyMutation.isPending}
+                          >
+                            <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))}
