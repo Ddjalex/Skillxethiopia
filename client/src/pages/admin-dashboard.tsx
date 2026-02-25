@@ -708,7 +708,7 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
 
   const form = useForm({
     resolver: zodResolver(insertSeasonSchema.omit({ courseId: true })),
-    defaultValues: { title: "", seasonNumber: 1, price: "19.99" }
+    defaultValues: { title: "", seasonNumber: 1, price: "200" }
   });
 
   return (
@@ -731,7 +731,7 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
               <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} />
             </div>
             <div className="space-y-2">
-              <Label>Price (USD)</Label>
+              <Label>Price (ETB)</Label>
               <Input {...form.register("price")} />
             </div>
           </div>

@@ -56,22 +56,24 @@ export default function EpisodePlayer() {
                 <ReactPlayer 
                   url={streamData.videoProvider === "VIMEO" 
                     ? (streamData.videoRef.startsWith("http") ? streamData.videoRef : `https://vimeo.com/${streamData.videoRef}`)
-                    : streamData.videoRef
+                    : streamData.videoProvider === "YOUTUBE"
+                      ? (streamData.videoRef.startsWith("http") ? streamData.videoRef : `https://www.youtube.com/watch?v=${streamData.videoRef}`)
+                      : streamData.videoRef
                   } 
                   width="100%" 
                   height="100%" 
                   controls 
-                  playing={false}
+                  playing={true}
                   config={{
                     vimeo: { 
                       playerOptions: { 
                         responsive: true,
-                        autoplay: false,
+                        autoplay: true,
                         dnt: true
                       } 
                     },
                     youtube: {
-                      playerVars: { showinfo: 1 }
+                      playerVars: { showinfo: 1, autoplay: 1 }
                     }
                   }}
                   onError={(e) => console.error("ReactPlayer Error:", e)}

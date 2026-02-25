@@ -35,7 +35,9 @@ export default function VideoOnlyPage() {
         <ReactPlayer
           url={data.videoProvider === "VIMEO" 
             ? (data.videoRef.startsWith("http") ? data.videoRef : `https://vimeo.com/${data.videoRef}`)
-            : data.videoRef
+            : data.videoProvider === "YOUTUBE"
+              ? (data.videoRef.startsWith("http") ? data.videoRef : `https://www.youtube.com/watch?v=${data.videoRef}`)
+              : data.videoRef
           }
           width="100%"
           height="100%"
@@ -48,6 +50,9 @@ export default function VideoOnlyPage() {
                 autoplay: true,
                 dnt: true
               } 
+            },
+            youtube: {
+              playerVars: { showinfo: 1, autoplay: 1 }
             }
           }}
           onError={(e) => console.error("ReactPlayer Error:", e)}
