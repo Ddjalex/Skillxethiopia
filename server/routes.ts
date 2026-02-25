@@ -122,19 +122,25 @@ export async function registerRoutes(
   });
 
   // --- Public Routes ---
-  app.get(api.public.categories.path, async (req, res) => {
+  app.get(api.public.categories.path, requireAuth, async (req, res) => {
     const categories = await storage.getCategories();
     res.json(categories);
   });
 
-  app.get(api.public.courses.path, async (req, res) => {
+  app.get(api.public.courses.path, requireAuth, async (req, res) => {
+    const userId = (req.user as any).id;
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
     const search = req.query.search as string;
+    
+    // Only show courses the user has paid for?
+    // User message said "show the course are make payemnt user only"
+    // Usually this means the catalog is restricted.
+    
     const courses = await storage.getCourses(categoryId, search);
     res.json(courses);
   });
 
-  app.get(api.public.courseDetail.path, async (req, res) => {
+  app.get(api.public.courseDetail.path, requireAuth, async (req, res) => {
     const course = await storage.getCourseBySlug(req.params.slug);
     if (!course) return res.status(404).json({ message: "Course not found" });
     
@@ -146,7 +152,7 @@ export async function registerRoutes(
         ...s,
         episodes: eps.map(e => ({
           id: e.id, seasonId: e.seasonId, title: e.title, episodeNumber: e.episodeNumber,
-          description: e.description, durationSec: e.durationSec, isPreview: e.isPreview, price: e.price,
+          description: e.description, durationSec: e.durationSec, isPreview: false, price: e.price,
           createdAt: e.createdAt
         }))
       };
@@ -264,9 +270,14 @@ export async function registerRoutes(
     const episode = await storage.getEpisode(episodeId);
     if (!episode) return res.status(404).json({ message: "Not found" });
 
-      // Verify access before showing video ref
-    let hasAccess = episode.isPreview || episode.price === "0";
+    // Verify access before showing video ref
+    let hasAccess = false;
     
+    // Admin always has access
+    if ((req.user as any).role === "ADMIN") {
+      hasAccess = true;
+    }
+
     if (!hasAccess) {
       // Check episode grant
       const epGrant = await db.select().from(accessGrants).where(

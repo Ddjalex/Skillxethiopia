@@ -70,7 +70,7 @@ export default function CourseDetailPage() {
         const dashboardEp = dashboardSeason?.episodes.find(de => de.id === e.id);
         return {
           ...e,
-          isUnlocked: dashboardEp?.isUnlocked || e.isPreview || e.price === "0",
+          isUnlocked: dashboardEp?.isUnlocked || false,
           isPending: dashboardEp?.isPending || false
         };
       })

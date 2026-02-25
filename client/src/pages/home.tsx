@@ -47,14 +47,9 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/browse">
-                <Button size="lg" className="h-12 px-8 text-base rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
-                  Browse Courses
-                </Button>
-              </Link>
               <Link href="/auth">
-                <Button variant="outline" size="lg" className="h-12 px-8 text-base rounded-full backdrop-blur-sm bg-background/50">
-                  Get Started Free
+                <Button size="lg" className="h-12 px-8 text-base rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
+                  Sign In to Access Courses
                 </Button>
               </Link>
             </div>
