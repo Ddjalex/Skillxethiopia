@@ -34,13 +34,23 @@ export default function VideoOnlyPage() {
       <div className="w-full h-full max-w-[100vw] max-h-[100vh] aspect-video">
         <ReactPlayer
           url={data.videoProvider === "VIMEO" 
-            ? `https://vimeo.com/${data.videoRef}` 
+            ? (data.videoRef.startsWith("http") ? data.videoRef : `https://vimeo.com/${data.videoRef}`)
             : data.videoRef
           }
           width="100%"
           height="100%"
           controls
           playing
+          config={{
+            vimeo: { 
+              playerOptions: { 
+                responsive: true,
+                autoplay: true,
+                dnt: true
+              } 
+            }
+          }}
+          onError={(e) => console.error("ReactPlayer Error:", e)}
         />
       </div>
     </div>

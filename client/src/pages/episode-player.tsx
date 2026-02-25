@@ -55,7 +55,7 @@ export default function EpisodePlayer() {
               <div className="w-full h-full">
                 <ReactPlayer 
                   url={streamData.videoProvider === "VIMEO" 
-                    ? `https://vimeo.com/${streamData.videoRef}` 
+                    ? (streamData.videoRef.startsWith("http") ? streamData.videoRef : `https://vimeo.com/${streamData.videoRef}`)
                     : streamData.videoRef
                   } 
                   width="100%" 
@@ -74,6 +74,7 @@ export default function EpisodePlayer() {
                       playerVars: { showinfo: 1 }
                     }
                   }}
+                  onError={(e) => console.error("ReactPlayer Error:", e)}
                 />
               </div>
             ) : (
