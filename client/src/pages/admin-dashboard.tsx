@@ -46,6 +46,7 @@ import {
 } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import ReactPlayer from "react-player";
 import { insertCourseSchema, insertCategorySchema, insertEpisodeSchema, insertSeasonSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
@@ -626,6 +627,31 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                           <TableCell>{ep.price} ETB</TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-primary">
+                                    <Video className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-4xl aspect-video p-0 overflow-hidden bg-black border-none">
+                                  <ReactPlayer 
+                                    url={ep.videoProvider === "VIMEO" 
+                                      ? (ep.videoRef.startsWith("http") 
+                                          ? ep.videoRef
+                                          : `https://vimeo.com/${ep.videoRef}`)
+                                      : ep.videoProvider === "YOUTUBE"
+                                        ? (ep.videoRef.startsWith("http") 
+                                            ? ep.videoRef 
+                                            : `https://www.youtube.com/watch?v=${ep.videoRef}`)
+                                        : ep.videoRef
+                                    } 
+                                    width="100%" 
+                                    height="100%" 
+                                    controls 
+                                    playing
+                                  />
+                                </DialogContent>
+                              </Dialog>
                               <EditEpisodeDialog episode={ep} courseId={courseId} />
                               <DeleteConfirmDialog 
                                 type="episode" 
