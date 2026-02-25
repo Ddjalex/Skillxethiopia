@@ -53,7 +53,7 @@ export default function VideoOnlyPage() {
         ) : (
           <ReactPlayer
             url={data.videoProvider === "VIMEO" 
-              ? (data.videoRef.startsWith("http") ? data.videoRef : `https://vimeo.com/${data.videoRef}`)
+              ? (data.videoRef.startsWith("http") ? data.videoRef.split('?')[0] : `https://vimeo.com/${data.videoRef}`)
               : data.videoProvider === "YOUTUBE"
                 ? (data.videoRef.startsWith("http") ? data.videoRef : `https://www.youtube.com/watch?v=${data.videoRef}`)
                 : data.videoRef
