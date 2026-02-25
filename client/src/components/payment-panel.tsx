@@ -130,7 +130,7 @@ export function PaymentPanel({
                     <img 
                       src={selectedOption.qrCodeUrl} 
                       alt="Payment QR" 
-                      className="w-48 h-48 rounded-lg shadow-sm border border-border"
+                      className="w-48 h-48 rounded-lg shadow-sm border border-border object-contain bg-white"
                     />
                     <div className="absolute inset-0 flex items-center justify-center bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
                       <Button size="sm" variant="secondary" onClick={() => window.open(selectedOption.qrCodeUrl, '_blank')}>

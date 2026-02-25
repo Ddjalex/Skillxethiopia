@@ -244,6 +244,8 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: { fileIn
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payment-options"] });
       toast({ title: "Success", description: "Payment option added" });
+      form.reset();
+      setPreviewUrl(null);
     }
   });
 
