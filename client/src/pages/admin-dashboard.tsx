@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, Users, BookOpen, Layers, Plus, 
   Video, Image as ImageIcon, FileText, Settings,
-  Pencil, Trash2, CreditCard
+  Pencil, Trash2, CreditCard, Upload
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -151,7 +151,7 @@ export default function AdminDashboard() {
         {activeTab === "categories" && <CategoryManagement categories={categories || []} />}
         {activeTab === "purchases" && <PurchaseManagement />}
         {activeTab === "users" && <UserManagement users={users || []} />}
-        {activeTab === "payments" && <PaymentManagement />}
+        {activeTab === "payments" && <PaymentManagement fileInputRef={fileInputRef} previewUrl={previewUrl} setPreviewUrl={setPreviewUrl} />}
         {activeTab === "settings" && <AdminSettings />}
       </div>
     </div>
@@ -230,7 +230,7 @@ function PurchaseManagement() {
   );
 }
 
-function PaymentManagement() {
+function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: { fileInputRef: React.RefObject<HTMLInputElement>, previewUrl: string | null, setPreviewUrl: (url: string | null) => void }) {
   const { toast } = useToast();
   const { data: options, isLoading } = useQuery<any[]>({
     queryKey: ["/api/payment-options"],
@@ -317,7 +317,7 @@ function PaymentManagement() {
               <div className="space-y-2">
                 <Label>QR Code Image</Label>
                 <div className="flex flex-col gap-2">
-                  <Input 
+                  <input 
                     type="file" 
                     accept="image/*" 
                     className="hidden" 
@@ -338,7 +338,7 @@ function PaymentManagement() {
                     <div className="relative group aspect-square w-32 mx-auto bg-muted rounded-lg overflow-hidden border">
                       <img src={previewUrl} alt="QR preview" className="w-full h-full object-contain" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                        <Button size="sm" variant="secondary" type="button" onClick={() => fileInputRef.current?.click()}>
                           Change
                         </Button>
                       </div>
