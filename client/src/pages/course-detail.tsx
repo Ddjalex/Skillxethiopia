@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/layout-nav";
-import { useCourseDetail, useBuyItem } from "@/hooks/use-courses";
+import { useCourseDetail, useBuyItem, useDashboardCourse } from "@/hooks/use-courses";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
