@@ -270,9 +270,13 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: { fileIn
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      form.setValue("qrCodeUrl", url); // In a real app, you'd upload to S3/Cloudinary here
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPreviewUrl(base64String);
+        form.setValue("qrCodeUrl", base64String);
+      };
+      reader.readAsDataURL(file);
     }
   };
 

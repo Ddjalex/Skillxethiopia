@@ -64,8 +64,12 @@ export function PaymentPanel({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPreviewUrl(base64String);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
