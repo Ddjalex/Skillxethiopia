@@ -1084,9 +1084,9 @@ function UserManagement({ users }: { users: any[] }) {
 function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: number, seasons?: any[] }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const { data: seasons, isLoading: loadingSeasons } = useQuery<any[]>({
+  const { data: seasons, isLoading: loadingSeasons, refetch } = useQuery<any[]>({
     queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
-    enabled: !initialSeasons,
+    enabled: false,
     queryFn: async () => {
       const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: courseId }));
       if (!res.ok) throw new Error("Failed to fetch seasons");
@@ -1096,6 +1096,15 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
   });
 
   const displaySeasons = initialSeasons || seasons;
+
+  // Refetch when dialog opens if no initial seasons
+  const onOpenChange = (val: boolean) => {
+    setOpen(val);
+    if (val && !initialSeasons) {
+      refetch();
+    }
+    if (!val) form.reset();
+  };
 
   const createEpisode = useMutation({
     mutationFn: async (data: any) => {
@@ -1146,10 +1155,7 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
   };
 
   return (
-    <Dialog open={open} onOpenChange={(val) => {
-      setOpen(val);
-      if (!val) form.reset();
-    }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm"><Plus className="h-3 w-3 mr-1" /> Episode</Button>
       </DialogTrigger>
