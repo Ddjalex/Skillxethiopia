@@ -1,9 +1,9 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Clock, PlayCircle, Users } from "lucide-react";
+import { Play, Users, Star } from "lucide-react";
 import { Link } from "wouter";
 import { Course, Category } from "@shared/schema";
+import { motion } from "framer-motion";
 
 interface CourseCardProps {
   course: Course & { category?: Category };
@@ -13,73 +13,72 @@ interface CourseCardProps {
 export function CourseCard({ course, isPurchased }: CourseCardProps) {
   return (
     <Link href={isPurchased ? `/dashboard/course/${course.id}` : `/course/${course.slug}`}>
-      <div className="block group h-full cursor-pointer">
-        <Card className="h-full flex flex-col overflow-hidden border-border/50 bg-card hover:shadow-xl hover:border-primary/30 transition-all duration-300">
-          <div className="relative aspect-video overflow-hidden bg-muted">
+      <motion.div
+        whileHover={{ y: -8 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        className="cursor-pointer group h-full"
+      >
+        <Card className="h-full flex flex-col overflow-hidden border-white/5 bg-white/[0.02] backdrop-blur-sm group-hover:bg-white/[0.05] group-hover:border-primary/30 transition-all duration-500 rounded-2xl">
+          <div className="relative aspect-video overflow-hidden bg-slate-900">
+            <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60 z-10"></div>
             {course.thumbnailUrl ? (
               <img 
                 src={course.thumbnailUrl} 
                 alt={course.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center bg-secondary">
-                <PlayCircle className="w-12 h-12 text-muted-foreground/50" />
+                <Play className="w-12 h-12 text-muted-foreground/50" />
               </div>
             )}
             
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20">
+              <div className="h-14 w-14 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform duration-500">
+                <Play className="h-6 w-6 fill-current ml-1" />
+              </div>
+            </div>
+
             {course.category && (
-              <Badge className="absolute top-3 left-3 bg-background/90 text-foreground backdrop-blur-sm shadow-sm hover:bg-background">
+              <Badge className="absolute top-4 left-4 z-20 bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md px-3 py-1 rounded-lg font-bold">
                 {course.category.name}
               </Badge>
             )}
 
-            {course.priceStrategy === "FREE" && (
-              <Badge variant="secondary" className="absolute top-3 right-3 shadow-sm">
-                Free
-              </Badge>
-            )}
+            <Badge className="absolute top-4 right-4 z-20 bg-primary/20 hover:bg-primary/20 text-primary border-none backdrop-blur-md px-3 py-1 rounded-lg font-bold">
+              {course.priceStrategy === "FREE" ? "FREE" : "PREMIUM"}
+            </Badge>
           </div>
 
-          <CardHeader className="p-4 pb-2 space-y-1">
-            <h3 className="font-semibold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+          <CardHeader className="p-6 pb-2 space-y-2">
+            <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
               {course.title}
             </h3>
-            <p className="text-sm text-muted-foreground line-clamp-1">
+            <p className="text-sm text-slate-400 font-light">
               By {course.instructorName}
             </p>
           </CardHeader>
 
-          <CardContent className="p-4 pt-2 flex-grow">
-            <p className="text-sm text-muted-foreground line-clamp-2">
+          <CardContent className="p-6 pt-2 flex-grow">
+            <p className="text-sm text-slate-400 line-clamp-2 font-light leading-relaxed">
               {course.description}
             </p>
           </CardContent>
 
-          <CardFooter className="p-4 pt-0 mt-auto border-t border-border/30 bg-muted/10">
-            <div className="flex items-center justify-between w-full mt-3">
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" /> 1.2k
-                </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> 4h 30m
-                </span>
+          <CardFooter className="p-6 pt-0 mt-auto border-t border-white/5">
+            <div className="flex items-center justify-between w-full mt-4 text-slate-500 text-xs font-medium">
+              <div className="flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" />
+                <span>1.2k Learners</span>
               </div>
-              
-              {isPurchased ? (
-                <Button size="sm" variant="secondary" className="ml-auto">
-                  Continue
-                </Button>
-              ) : (
-                <span className="font-bold text-primary">
-                  {course.priceStrategy === "FREE" ? "Start Learning" : "View Course"}
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 text-amber-400/80">
+                <Star className="h-3.5 w-3.5 fill-current" />
+                <span>4.9</span>
+              </div>
             </div>
           </CardFooter>
         </Card>
-      </div>
+      </motion.div>
     </Link>
   );
 }

@@ -4,144 +4,193 @@ import { useCourses, useCategories } from "@/hooks/use-courses";
 import { CourseCard } from "@/components/course-card";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, Zap, Globe, Loader2, MonitorPlay } from "lucide-react";
+import { ArrowRight, Sparkles, Zap, Globe, Loader2, MonitorPlay, Play } from "lucide-react";
 
 export default function Home() {
   const { data: courses, isLoading: coursesLoading } = useCourses();
   const { data: categories, isLoading: catsLoading } = useCategories();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#020617] text-white selection:bg-primary/30">
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 md:py-32">
-        {/* Background Gradients */}
-        <div className="absolute inset-0 bg-background">
-          <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute top-0 -right-4 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-          <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+      <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-20">
+        {/* Animated Background Elements */}
+        <div className="absolute inset-0 z-0">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-700"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
         </div>
 
-        <div className="container relative z-10 mx-auto px-4 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-sm font-medium text-primary mb-6 backdrop-blur-sm">
-              <Sparkles className="mr-2 h-4 w-4" />
-              <span>Re-imagining online education</span>
-            </div>
-            
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-6">
-              Master new skills with <br className="hidden md:block" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-purple-500 to-blue-500">
-                Cinematic Learning
-              </span>
-            </h1>
-            
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
-              Unlock your potential with our premium library of high-quality courses. 
-              Learn from industry experts in a distraction-free environment.
-            </p>
-            
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link href="/auth">
-                <Button size="lg" className="h-12 px-8 text-base rounded-full shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all">
-                  Sign In to Access Courses
+        <div className="container relative z-10 mx-auto px-4">
+          <div className="max-w-5xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-medium text-blue-400 mb-8 backdrop-blur-md">
+                <Sparkles className="mr-2 h-4 w-4" />
+                <span>The Future of Learning in Ethiopia</span>
+              </div>
+              
+              <h1 className="text-5xl md:text-8xl font-black tracking-tight mb-8 leading-[1.1]">
+                Master Skills with <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">
+                  Premium Content
+                </span>
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
+                High-quality, cinematic courses designed for the next generation of creators and professionals.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+                <Link href="/auth">
+                  <Button size="lg" className="h-14 px-10 text-lg rounded-2xl bg-primary hover:bg-primary/90 text-white border-none shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all hover:scale-105 active:scale-95">
+                    Start Learning Now
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Button variant="outline" size="lg" className="h-14 px-10 text-lg rounded-2xl bg-white/5 border-white/10 hover:bg-white/10 text-white backdrop-blur-md transition-all">
+                  <Play className="mr-2 h-5 w-5 fill-current" />
+                  Watch Demo
                 </Button>
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
+              </div>
+            </motion.div>
 
-      {/* Features Grid */}
-      <section className="py-12 bg-muted/30 border-y border-border/50">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-background border border-border/50 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center mb-4">
-                <Globe className="h-6 w-6" />
+            {/* Dashboard Preview */}
+            <motion.div 
+              initial={{ opacity: 0, y: 100 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-20 relative"
+            >
+              <div className="relative rounded-3xl border border-white/10 bg-slate-900/50 p-2 backdrop-blur-2xl shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10"></div>
+                <img 
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=2070&auto=format&fit=crop" 
+                  alt="Platform Preview" 
+                  className="rounded-2xl w-full h-auto object-cover aspect-video opacity-80"
+                />
               </div>
-              <h3 className="font-bold text-lg mb-2">Learn Anywhere</h3>
-              <p className="text-muted-foreground">Access your courses on any device, anytime. Your progress syncs automatically.</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-background border border-border/50 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center mb-4">
-                <Zap className="h-6 w-6" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">Expert Instructors</h3>
-              <p className="text-muted-foreground">Learn from industry leaders who have actual real-world experience.</p>
-            </div>
-            <div className="flex flex-col items-center text-center p-6 rounded-2xl bg-background border border-border/50 shadow-sm">
-              <div className="h-12 w-12 rounded-full bg-pink-100 dark:bg-pink-900/20 text-pink-600 flex items-center justify-center mb-4">
-                <MonitorPlay className="h-6 w-6" />
-              </div>
-              <h3 className="font-bold text-lg mb-2">High Quality Video</h3>
-              <p className="text-muted-foreground">Crystal clear 4K video lessons with professional audio and easy navigation.</p>
-            </div>
+              {/* Floating Elements */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-3xl"></div>
+              <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-16 container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold">Browse Categories</h2>
-          <Link href="/browse" className="text-primary text-sm font-medium hover:underline flex items-center">
-            View all <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </div>
-        
-        {catsLoading ? (
-          <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {categories?.map((cat: any) => (
-              <Link key={cat.id} href={`/browse?categoryId=${cat.id}`}>
-                <div className="px-6 py-3 rounded-full border border-border bg-card hover:border-primary hover:bg-primary/5 cursor-pointer transition-all">
-                  <span className="font-medium">{cat.name}</span>
+      {/* Trust Section */}
+      <section className="py-24 relative">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-sm font-bold tracking-widest text-blue-500 uppercase mb-4">Why Skillxethiopia</h2>
+            <p className="text-3xl md:text-5xl font-bold">Unmatched Learning Experience</p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-10">
+            {[
+              { icon: Globe, title: "Global Standards", desc: "Courses produced with international quality benchmarks." },
+              { icon: Zap, title: "Practical Focus", desc: "Project-based learning that gets you hired." },
+              { icon: MonitorPlay, title: "4K Content", desc: "Crystal clear video lessons for better retention." }
+            ].map((feature, i) => (
+              <motion.div 
+                key={i}
+                whileHover={{ y: -10 }}
+                className="group p-8 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all"
+              >
+                <div className="h-14 w-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  <feature.icon className="h-7 w-7" />
                 </div>
-              </Link>
+                <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+                <p className="text-slate-400 leading-relaxed">{feature.desc}</p>
+              </motion.div>
             ))}
           </div>
-        )}
+        </div>
       </section>
 
       {/* Featured Courses */}
-      <section className="py-16 bg-muted/30">
+      <section className="py-24 bg-white/[0.02] border-y border-white/5">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold">Featured Courses</h2>
-            <Link href="/browse" className="hidden md:flex text-primary font-medium hover:underline items-center">
-              Explore library <ArrowRight className="ml-1 h-4 w-4" />
+          <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-4">
+            <div>
+              <h2 className="text-sm font-bold tracking-widest text-blue-500 uppercase mb-4">Explore</h2>
+              <p className="text-3xl md:text-5xl font-bold">Featured Courses</p>
+            </div>
+            <Link href="/browse" className="group text-white/60 hover:text-white transition-colors flex items-center text-lg font-medium">
+              View All Courses <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
           {coursesLoading ? (
-            <div className="flex justify-center p-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
+            <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {courses?.slice(0, 4).map((course: any) => (
                 <CourseCard key={course.id} course={course} />
               ))}
             </div>
           )}
-          
-          <div className="mt-8 text-center md:hidden">
-            <Link href="/browse">
-              <Button variant="outline" className="w-full">Explore Library</Button>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-32 relative overflow-hidden">
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto rounded-[3rem] bg-gradient-to-br from-primary to-indigo-600 p-12 md:p-20 text-center relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+            <h2 className="text-3xl md:text-6xl font-black mb-8">Ready to transform your career?</h2>
+            <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto font-light">
+              Join thousands of learners and start your journey today with the best instructors in Ethiopia.
+            </p>
+            <Link href="/auth?tab=register">
+              <Button size="lg" className="h-16 px-12 text-xl rounded-2xl bg-white text-primary hover:bg-white/90 shadow-2xl transition-all hover:scale-105 active:scale-95">
+                Create Free Account
+              </Button>
             </Link>
           </div>
         </div>
       </section>
       
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="container mx-auto px-4 text-center text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Skillxethiopia. All rights reserved.</p>
+      <footer className="border-t border-white/5 py-20 bg-[#020617]">
+        <div className="container mx-auto px-4">
+          <div className="grid md:grid-cols-4 gap-12 mb-20">
+            <div className="col-span-2">
+              <Link href="/" className="flex items-center gap-2 font-bold text-2xl mb-6">
+                <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary text-white">
+                  <span className="font-black text-xl">SX</span>
+                </div>
+                <span className="tracking-tighter">Skillxethiopia</span>
+              </Link>
+              <p className="text-slate-400 max-w-sm leading-relaxed">
+                Empowering the youth of Ethiopia through world-class digital education and skill development.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6">Platform</h4>
+              <ul className="space-y-4 text-slate-400">
+                <li><Link href="/browse" className="hover:text-white transition-colors">Courses</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
+                <li><Link href="/auth" className="hover:text-white transition-colors">Sign In</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-6">Connect</h4>
+              <ul className="space-y-4 text-slate-400">
+                <li><a href="#" className="hover:text-white transition-colors">Telegram</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Facebook</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Instagram</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-10 border-t border-white/5 text-center text-slate-500 text-sm">
+            <p>&copy; {new Date().getFullYear()} Skillxethiopia. Elevating Ethiopian Excellence.</p>
+          </div>
         </div>
       </footer>
     </div>
