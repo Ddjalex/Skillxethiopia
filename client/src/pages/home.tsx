@@ -86,10 +86,16 @@ export default function Home() {
       {/* Trust Section */}
       <section className="py-24 relative">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-sm font-bold tracking-widest text-blue-500 uppercase mb-4">Why Skillxethiopia</h2>
             <p className="text-3xl md:text-5xl font-bold">Unmatched Learning Experience</p>
-          </div>
+          </motion.div>
           
           <div className="grid md:grid-cols-3 gap-10">
             {[
@@ -99,6 +105,10 @@ export default function Home() {
             ].map((feature, i) => (
               <motion.div 
                 key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
                 whileHover={{ y: -10 }}
                 className="group p-8 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all"
               >
@@ -116,7 +126,12 @@ export default function Home() {
       {/* Featured Courses */}
       <section className="py-24 bg-white/[0.02] border-y border-white/5">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-4">
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            className="flex flex-col md:flex-row items-end justify-between mb-16 gap-4"
+          >
             <div>
               <h2 className="text-sm font-bold tracking-widest text-blue-500 uppercase mb-4">Explore</h2>
               <p className="text-3xl md:text-5xl font-bold">Featured Courses</p>
@@ -124,14 +139,22 @@ export default function Home() {
             <Link href="/browse" className="group text-white/60 hover:text-white transition-colors flex items-center text-lg font-medium">
               View All Courses <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Link>
-          </div>
+          </motion.div>
 
           {coursesLoading ? (
             <div className="flex justify-center py-20"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {courses?.slice(0, 4).map((course: any) => (
-                <CourseCard key={course.id} course={course} />
+              {courses?.slice(0, 4).map((course: any, i: number) => (
+                <motion.div
+                  key={course.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                >
+                  <CourseCard course={course} />
+                </motion.div>
               ))}
             </div>
           )}
@@ -141,7 +164,13 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-32 relative overflow-hidden">
         <div className="container mx-auto px-4 relative z-10">
-          <div className="max-w-4xl mx-auto rounded-[3rem] bg-gradient-to-br from-primary to-indigo-600 p-12 md:p-20 text-center relative overflow-hidden">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="max-w-4xl mx-auto rounded-[3rem] bg-gradient-to-br from-primary to-indigo-600 p-12 md:p-20 text-center relative overflow-hidden"
+          >
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
             <h2 className="text-3xl md:text-6xl font-black mb-8">Ready to transform your career?</h2>
             <p className="text-xl text-white/80 mb-12 max-w-2xl mx-auto font-light">
