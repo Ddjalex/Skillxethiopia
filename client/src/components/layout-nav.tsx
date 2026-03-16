@@ -37,8 +37,8 @@ export function Navbar() {
           <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white shadow-sm group-hover:scale-105 transition-transform">
             <span className="text-base font-black">SX</span>
           </div>
-          <span className="font-extrabold tracking-tight text-lg hidden sm:block text-foreground">
-            Skillx<span className="text-muted-foreground">ethiopia</span>
+          <span className="font-extrabold tracking-tight text-lg hidden sm:block">
+            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>x</span><span style={{ color: "#DA121A" }}>ethiopia</span>
           </span>
         </Link>
 

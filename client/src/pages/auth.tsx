@@ -44,7 +44,7 @@ export default function AuthPage() {
             <span className="text-lg font-black">SX</span>
           </div>
           <span className="font-extrabold text-xl tracking-tight">
-            Skillx<span className="text-slate-400">ethiopia</span>
+            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>x</span><span style={{ color: "#DA121A" }}>ethiopia</span>
           </span>
         </Link>
 
