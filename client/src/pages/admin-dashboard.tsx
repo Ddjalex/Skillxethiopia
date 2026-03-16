@@ -543,7 +543,7 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
 
   const form = useForm({
     resolver: zodResolver(insertSeasonSchema.omit({ courseId: true })),
-    defaultValues: { title: season.title, seasonNumber: season.seasonNumber, price: season.price }
+    defaultValues: { title: season.title, seasonNumber: season.seasonNumber, price: season.price, instructorName: season.instructorName || "" }
   });
 
   return (
@@ -557,6 +557,10 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
           <div className="space-y-1.5">
             <Label>Season Title</Label>
             <Input {...form.register("title")} className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Instructor Name <span className="text-muted-foreground text-xs font-normal">(optional — overrides course instructor)</span></Label>
+            <Input {...form.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-10" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -703,7 +707,9 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                 <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/40">
                   <div>
                     <p className="font-semibold text-sm">Season {season.seasonNumber}: {season.title}</p>
-                    <p className="text-xs text-muted-foreground">{season.price} ETB</p>
+                    <p className="text-xs text-muted-foreground">
+                      {season.price} ETB{season.instructorName ? ` · ${season.instructorName}` : ""}
+                    </p>
                   </div>
                   <div className="flex gap-1">
                     <EditSeasonDialog season={season} courseId={courseId} />
@@ -1085,7 +1091,7 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
 
   const form = useForm({
     resolver: zodResolver(insertSeasonSchema.omit({ courseId: true })),
-    defaultValues: { title: "", seasonNumber: 1, price: "200" }
+    defaultValues: { title: "", seasonNumber: 1, price: "200", instructorName: "" }
   });
 
   return (
@@ -1101,6 +1107,10 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
           <div className="space-y-1.5">
             <Label>Season Title</Label>
             <Input {...form.register("title")} placeholder="Getting Started" className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Instructor Name <span className="text-muted-foreground text-xs font-normal">(optional — overrides course instructor)</span></Label>
+            <Input {...form.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-10" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">

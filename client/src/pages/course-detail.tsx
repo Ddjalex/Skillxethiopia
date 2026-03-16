@@ -228,9 +228,16 @@ export default function CourseDetailPage() {
                       <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
                         {season.seasonNumber}
                       </div>
-                      <span className="font-semibold text-sm text-left truncate">
-                        {season.title}
-                      </span>
+                      <div className="min-w-0 text-left">
+                        <span className="font-semibold text-sm block truncate">
+                          {season.title}
+                        </span>
+                        {season.instructorName && (
+                          <span className="text-xs text-muted-foreground">
+                            By {season.instructorName}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>

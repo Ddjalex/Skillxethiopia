@@ -49,7 +49,8 @@ export const seasons = pgTable("seasons", {
   courseId: integer("course_id").notNull(),
   title: text("title").notNull(),
   seasonNumber: integer("season_number").notNull(),
-  price: text("price").notNull(), 
+  price: text("price").notNull(),
+  instructorName: text("instructor_name"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
