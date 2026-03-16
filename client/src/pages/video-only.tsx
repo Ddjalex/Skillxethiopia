@@ -50,6 +50,14 @@ export default function VideoOnlyPage() {
               Reload Player
             </Button>
           </div>
+        ) : data.videoProvider === "BUNNY" ? (
+          <iframe
+            src={data.videoRef.startsWith("http") ? data.videoRef : `https://iframe.mediadelivery.net/embed/${data.videoRef}`}
+            className="w-full h-full"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            onError={() => setPlayerError("This Bunny.net video could not be loaded. Please verify the library ID and video ID.")}
+          />
         ) : (
           <ReactPlayer
             url={data.videoProvider === "VIMEO" 

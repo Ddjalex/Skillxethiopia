@@ -43,6 +43,11 @@ export default function EpisodePlayer() {
     );
   }
 
+  const buildBunnyUrl = (videoRef: string) => {
+    if (videoRef.startsWith("http")) return videoRef;
+    return `https://iframe.mediadelivery.net/embed/${videoRef}`;
+  };
+
   const buildVideoUrl = () => {
     if (!streamData) return "";
     const { videoProvider, videoRef } = streamData;
@@ -86,22 +91,32 @@ export default function EpisodePlayer() {
                 </Button>
               </div>
             ) : streamData ? (
-              <ReactPlayer
-                url={buildVideoUrl()}
-                width="100%"
-                height="100%"
-                controls
-                playing
-                config={{
-                  vimeo: { playerOptions: { responsive: true, autoplay: true, muted: false } },
-                  youtube: { embedOptions: { autoplay: 1, modestbranding: 1, rel: 0 } }
-                }}
-                onError={(e) => {
-                  console.error("Player error:", e);
-                  setPlayerError("Failed to load video.");
-                }}
-                onReady={() => setPlayerError(null)}
-              />
+              streamData.videoProvider === "BUNNY" ? (
+                <iframe
+                  src={buildBunnyUrl(streamData.videoRef)}
+                  className="absolute inset-0 w-full h-full"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                  allowFullScreen
+                  onError={() => setPlayerError("Failed to load Bunny.net video.")}
+                />
+              ) : (
+                <ReactPlayer
+                  url={buildVideoUrl()}
+                  width="100%"
+                  height="100%"
+                  controls
+                  playing
+                  config={{
+                    vimeo: { playerOptions: { responsive: true, autoplay: true, muted: false } },
+                    youtube: { embedOptions: { autoplay: 1, modestbranding: 1, rel: 0 } }
+                  }}
+                  onError={(e) => {
+                    console.error("Player error:", e);
+                    setPlayerError("Failed to load video.");
+                  }}
+                  onReady={() => setPlayerError(null)}
+                />
+              )
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-white/40 text-sm">
                 Video source unavailable

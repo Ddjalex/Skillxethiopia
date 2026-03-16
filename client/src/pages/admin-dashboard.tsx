@@ -628,6 +628,7 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
                 <SelectItem value="YOUTUBE">YouTube</SelectItem>
                 <SelectItem value="DAILYMOTION">DailyMotion</SelectItem>
                 <SelectItem value="WISTIA">Wistia</SelectItem>
+                <SelectItem value="BUNNY">Bunny.net</SelectItem>
                 <SelectItem value="URL">Direct URL</SelectItem>
               </SelectContent>
             </Select>
@@ -727,17 +728,26 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                                 </Button>
                               </DialogTrigger>
                               <DialogContent className="max-w-4xl aspect-video p-0 overflow-hidden bg-black border-none">
-                                <ReactPlayer
-                                  url={ep.videoProvider === "VIMEO"
-                                    ? (ep.videoRef.startsWith("http") ? ep.videoRef : `https://vimeo.com/${ep.videoRef}`)
-                                    : ep.videoProvider === "YOUTUBE"
-                                      ? (ep.videoRef.startsWith("http") ? ep.videoRef : `https://www.youtube.com/watch?v=${ep.videoRef}`)
-                                      : ep.videoRef}
-                                  width="100%"
-                                  height="100%"
-                                  controls
-                                  playing
-                                />
+                                {ep.videoProvider === "BUNNY" ? (
+                                  <iframe
+                                    src={ep.videoRef.startsWith("http") ? ep.videoRef : `https://iframe.mediadelivery.net/embed/${ep.videoRef}`}
+                                    className="w-full h-full"
+                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                                    allowFullScreen
+                                  />
+                                ) : (
+                                  <ReactPlayer
+                                    url={ep.videoProvider === "VIMEO"
+                                      ? (ep.videoRef.startsWith("http") ? ep.videoRef : `https://vimeo.com/${ep.videoRef}`)
+                                      : ep.videoProvider === "YOUTUBE"
+                                        ? (ep.videoRef.startsWith("http") ? ep.videoRef : `https://www.youtube.com/watch?v=${ep.videoRef}`)
+                                        : ep.videoRef}
+                                    width="100%"
+                                    height="100%"
+                                    controls
+                                    playing
+                                  />
+                                )}
                               </DialogContent>
                             </Dialog>
                             <EditEpisodeDialog episode={ep} courseId={courseId} />
@@ -1344,13 +1354,19 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
                   <SelectItem value="YOUTUBE">YouTube</SelectItem>
                   <SelectItem value="DAILYMOTION">DailyMotion</SelectItem>
                   <SelectItem value="WISTIA">Wistia</SelectItem>
+                  <SelectItem value="BUNNY">Bunny.net</SelectItem>
                   <SelectItem value="URL">Direct URL</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
               <Label>Video Ref (ID or URL)</Label>
-              <Input {...form.register("videoRef")} placeholder="Vimeo ID or URL" className="h-10" onBlur={(e) => detectDuration(e.target.value)} />
+              <Input
+                {...form.register("videoRef")}
+                placeholder={videoProvider === "BUNNY" ? "libraryId/videoId or full URL" : videoProvider === "VIMEO" ? "Vimeo ID or URL" : "ID or URL"}
+                className="h-10"
+                onBlur={(e) => detectDuration(e.target.value)}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Duration (seconds)</Label>
