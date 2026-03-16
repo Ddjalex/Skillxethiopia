@@ -181,7 +181,7 @@ export default function Home() {
                 Create Free Account
               </Button>
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
       
