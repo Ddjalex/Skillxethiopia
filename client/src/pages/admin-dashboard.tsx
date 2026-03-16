@@ -599,6 +599,8 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
     }
   });
 
+  const editVideoProvider = form.watch("videoProvider");
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -636,6 +638,11 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
           <div className="space-y-1.5">
             <Label>Video Ref</Label>
             <Input {...form.register("videoRef")} className="h-10" />
+            {editVideoProvider === "BUNNY" && (
+              <p className="text-xs text-muted-foreground">
+                Format: <span className="font-mono text-primary">libraryId/videoId</span> — e.g. <span className="font-mono">617163/3793f824-8eea-...</span>. Find your Library ID at dash.bunny.net/stream.
+              </p>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Duration (seconds)</Label>
@@ -1367,6 +1374,11 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
                 className="h-10"
                 onBlur={(e) => detectDuration(e.target.value)}
               />
+              {videoProvider === "BUNNY" && (
+                <p className="text-xs text-muted-foreground">
+                  Format: <span className="font-mono text-primary">libraryId/videoId</span> — e.g. <span className="font-mono">617163/3793f824-8eea-...</span>. Find your Library ID at dash.bunny.net/stream.
+                </p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Duration (seconds)</Label>
