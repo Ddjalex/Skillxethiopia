@@ -1,0 +1,192 @@
+Redesign my existing website UI/UX to feel modern, premium, clean, soft, and highly structured, inspired by the visual quality and design philosophy of SlothUI, but DO NOT copy their exact layout, branding, text, or assets. Use it only as style inspiration.
+
+MAIN GOAL:
+Upgrade my website into a professional SaaS/dashboard-style experience with:
+- a clean left sidebar or structured navigation
+- a soft top header
+- rounded cards and panels
+- elegant spacing and typography
+- subtle gradients
+- modern analytics/course-platform/dashboard feeling
+- premium, minimal, polished user experience
+- responsive design for desktop, tablet, and mobile
+
+DESIGN DIRECTION:
+I want the design language to feel:
+- modern
+- minimal
+- premium
+- structured
+- soft-glass / smooth UI
+- highly usable
+- visually balanced
+- not crowded
+- not overly colorful
+- not childish
+
+IMPORTANT:
+Do not rebuild my business logic unless required.
+Do not break existing backend/database/API connections.
+Keep all existing core functionality working.
+Focus first on UI/UX, layout system, spacing, reusable components, and responsive improvements.
+
+STYLE SYSTEM TO IMPLEMENT:
+Create a full design system for the project with:
+1. Global color tokens
+2. Typography scale
+3. Spacing scale
+4. Border radius system
+5. Shadow system
+6. Reusable button variants
+7. Reusable card variants
+8. Form input variants
+9. Badge/chip/tag variants
+10. Table/list item styles
+11. Empty states
+12. Loading states
+13. Error states
+14. Modal / drawer styles
+15. Accessible focus states
+
+VISUAL STYLE:
+- Soft neutral background with premium accent gradients
+- Rounded corners (large but elegant)
+- Clean white / off-white surfaces
+- Light borders with subtle shadows
+- Smooth hover effects
+- Modern active states
+- Better visual hierarchy
+- Professional spacing between sections
+- Strong alignment and grid consistency
+- Improve content readability
+- Use a modern icon system similar in spirit to Phosphor icons
+- Follow WCAG-friendly contrast and accessibility patterns where possible
+
+LAYOUT REQUIREMENTS:
+- Redesign page structure using a clean grid system
+- Add a polished sidebar navigation for desktop if suitable
+- Add top navigation/header with search, profile/actions, and page title area if suitable
+- Improve section separation with cards/panels
+- Make dashboards look more useful and premium
+- Improve all content density and spacing
+- Avoid stretched components
+- Use consistent container widths and padding
+- Make tables, forms, stats cards, media sections, and content sections look unified
+
+COMPONENT REQUIREMENTS:
+Redesign these common elements across the whole website:
+- Header
+- Sidebar
+- Navigation menu
+- Breadcrumbs
+- Cards
+- Buttons
+- Inputs
+- Textareas
+- Select dropdowns
+- Tabs
+- Tables
+- Pagination
+- Search bars
+- Filters
+- Status badges
+- Profile widgets
+- Media/image/video panels
+- CTA sections
+- Empty/no-data sections
+- Alerts/toasts
+- Modals/drawers
+- Footer
+
+USER EXPERIENCE IMPROVEMENTS:
+- Improve information hierarchy
+- Reduce clutter
+- Improve readability
+- Improve click targets
+- Use clearer section titles
+- Make important actions more visible
+- Make forms easier to scan
+- Improve admin/dashboard usability if admin exists
+- Improve mobile navigation
+- Make page transitions and hover interactions smoother
+- Add subtle motion, but keep it professional and lightweight
+
+RESPONSIVE REQUIREMENTS:
+- Desktop first, but fully responsive
+- Tablet layout must remain clean
+- Mobile layout must not feel cramped
+- Sidebar should collapse elegantly on smaller screens
+- Cards should stack nicely
+- Tables should become mobile-friendly
+- Buttons and filters should wrap properly
+- Avoid overflow issues or broken spacing
+
+DESIGN PRINCIPLES TO FOLLOW:
+- Atomic design thinking
+- Reusable components
+- Consistent naming
+- Mentally simple component variants
+- Global style tokens
+- Accessibility-aware styling
+- Professional SaaS product aesthetics
+- Performance-friendly frontend choices
+- Scalable UI architecture
+
+TECHNICAL INSTRUCTIONS:
+- First inspect the existing project structure and understand how the frontend is built
+- Preserve existing routes, data flow, and functionality
+- Refactor UI into reusable components where needed
+- Centralize styles, theme tokens, and utility classes
+- Remove duplicate or conflicting styles
+- Avoid inline style duplication
+- Improve maintainability of CSS / Tailwind / component styling
+- If the project already uses Tailwind, keep and improve it
+- If it uses CSS modules or plain CSS, reorganize cleanly
+- Use a consistent component architecture
+- Do not introduce unnecessary dependencies unless truly helpful
+
+IF THERE IS AN ADMIN PANEL:
+Also redesign the admin/dashboard to look more premium and modern:
+- better metric cards
+- cleaner sidebar
+- stronger page headers
+- better forms
+- cleaner CRUD pages
+- improved data tables
+- better empty/loading states
+- more polished action buttons
+- improved modal layout
+- modern settings/account pages
+
+DELIVERABLES I WANT:
+1. A complete visual redesign of the website UI
+2. Reusable design system / component styling
+3. Updated layout structure
+4. Responsive improvements
+5. Cleaner navigation experience
+6. Modernized admin UI too if it exists
+7. Clean code organization
+8. No broken functionality
+
+OUTPUT FORMAT:
+- First analyze the current codebase and explain what UI structure you found
+- Then list the redesign plan
+- Then implement the redesign step by step
+- Clearly show which files are changed
+- Keep code clean and reusable
+- Do not remove important features
+- Do not use placeholder logic that breaks the real system
+
+FINAL EXPECTATION:
+The finished website should look like a high-end modern SaaS/product/dashboard platform inspired by the design quality of SlothUI:
+- premium
+- elegant
+- soft
+- structured
+- modern
+- highly usable
+- responsive
+- visually consistent
+- investor/client ready
+
+Again: use SlothUI only as inspiration, not as a direct copy.

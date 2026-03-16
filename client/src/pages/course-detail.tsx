@@ -4,13 +4,16 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Loader2, Lock, Play, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Loader2, Lock, Play, Clock, CheckCircle, AlertCircle,
+  Users, Star, BookOpen, ChevronRight
+} from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
 import { useState } from "react";
@@ -18,7 +21,7 @@ import { useState } from "react";
 export default function CourseDetailPage() {
   const [, params] = useRoute("/course/:slug");
   const slug = params?.slug || "";
-  
+
   const { data, isLoading } = useCourseDetail(slug);
   const { user } = useAuth();
   const buyMutation = useBuyItem();
@@ -29,19 +32,14 @@ export default function CourseDetailPage() {
     itemType: "SEASON" | "EPISODE" | null;
     itemId: number | null;
     amount: string;
-  }>({
-    isOpen: false,
-    itemType: null,
-    itemId: null,
-    amount: ""
-  });
+  }>({ isOpen: false, itemType: null, itemId: null, amount: "" });
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </div>
     );
@@ -52,14 +50,20 @@ export default function CourseDetailPage() {
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
-          <p>Course not found</p>
+          <div className="text-center">
+            <p className="text-lg font-semibold text-foreground mb-1">Course not found</p>
+            <p className="text-sm text-muted-foreground">This course may have been removed.</p>
+            <Link href="/browse">
+              <Button size="sm" variant="outline" className="mt-4">Browse Courses</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   const { course, seasons, category } = data;
-  
+
   const enrichedSeasons = seasons.map(s => {
     const dashboardSeason = dashboardData?.seasons.find(ds => ds.id === s.id);
     return {
@@ -68,49 +72,31 @@ export default function CourseDetailPage() {
       isPending: dashboardSeason?.isPending || false,
       episodes: s.episodes.map(e => {
         const dashboardEp = dashboardSeason?.episodes.find(de => de.id === e.id);
-        return {
-          ...e,
-          isUnlocked: dashboardEp?.isUnlocked || false,
-          isPending: dashboardEp?.isPending || false
-        };
+        return { ...e, isUnlocked: dashboardEp?.isUnlocked || false, isPending: dashboardEp?.isPending || false };
       })
     };
   });
 
+  const totalEpisodes = enrichedSeasons.reduce((acc, s) => acc + s.episodes.length, 0);
+
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
-    if (!user) {
-      window.location.href = "/auth";
-      return;
-    }
-    setPaymentState({
-      isOpen: true,
-      itemType,
-      itemId,
-      amount
-    });
+    if (!user) { window.location.href = "/auth"; return; }
+    setPaymentState({ isOpen: true, itemType, itemId, amount });
   };
 
   const handlePaymentConfirm = (transactionRef: string, paymentProofUrl?: string) => {
     if (!paymentState.itemType || !paymentState.itemId) return;
-    
-    buyMutation.mutate({ 
-      itemType: paymentState.itemType, 
-      itemId: paymentState.itemId, 
-      amount: paymentState.amount,
-      transactionRef,
-      paymentProofUrl,
-    }, {
-      onSuccess: () => {
-        setPaymentState(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    buyMutation.mutate(
+      { itemType: paymentState.itemType, itemId: paymentState.itemId, amount: paymentState.amount, transactionRef, paymentProofUrl },
+      { onSuccess: () => setPaymentState(prev => ({ ...prev, isOpen: false })) }
+    );
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <PaymentPanel 
+      <PaymentPanel
         isOpen={paymentState.isOpen}
         onClose={() => setPaymentState(prev => ({ ...prev, isOpen: false }))}
         itemType={paymentState.itemType || "SEASON"}
@@ -120,63 +106,92 @@ export default function CourseDetailPage() {
         isPending={buyMutation.isPending}
       />
 
-      {/* Hero Header */}
-      <div className="bg-muted/30 border-b border-border">
-        <div className="container mx-auto px-4 py-12 md:py-16">
-          <div className="flex flex-col md:flex-row gap-8 items-start">
-            <div className="flex-1 space-y-6">
-              <div className="flex items-center gap-3">
+      {/* Breadcrumb + Hero */}
+      <div className="mt-16 border-b border-border bg-card">
+        <div className="container mx-auto px-4 lg:px-6">
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 py-4 text-xs text-muted-foreground">
+            <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
+            <ChevronRight className="h-3 w-3" />
+            <Link href="/browse" className="hover:text-foreground transition-colors">Courses</Link>
+            {category && (
+              <>
+                <ChevronRight className="h-3 w-3" />
+                <Link href={`/browse?categoryId=${category.id}`} className="hover:text-foreground transition-colors">
+                  {category.name}
+                </Link>
+              </>
+            )}
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-foreground font-medium truncate max-w-[150px]">{course.title}</span>
+          </nav>
+
+          {/* Hero */}
+          <div className="py-8 flex flex-col lg:flex-row gap-8 items-start">
+            <div className="flex-1 space-y-5">
+              <div className="flex flex-wrap items-center gap-2">
                 {category && (
-                  <Badge variant="outline" className="border-primary/50 text-primary">
-                    {category.name}
-                  </Badge>
+                  <Badge variant="secondary" className="font-semibold">{category.name}</Badge>
                 )}
-                <Badge variant="secondary">
-                  {seasons.length} Seasons
-                </Badge>
+                <Badge variant="outline">{seasons.length} Season{seasons.length !== 1 ? "s" : ""}</Badge>
+                <Badge variant="outline">{totalEpisodes} Episodes</Badge>
               </div>
 
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-3xl lg:text-4xl font-bold tracking-tight leading-tight">
                 {course.title}
               </h1>
 
-              <p className="text-lg text-muted-foreground leading-relaxed max-w-2xl">
+              <p className="text-muted-foreground leading-relaxed max-w-2xl">
                 {course.description}
               </p>
 
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" /> Last updated recently
+              <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground pt-1">
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" /> Recently updated
                 </span>
-                <span>•</span>
-                <span>By <span className="text-foreground font-medium">{course.instructorName}</span></span>
+                <span className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4" /> 1.2k learners
+                </span>
+                <span className="flex items-center gap-1.5 text-amber-500">
+                  <Star className="w-4 h-4 fill-current" />
+                  <span className="font-semibold">4.9</span>
+                </span>
+                <Separator orientation="vertical" className="h-4" />
+                <span>
+                  By <span className="text-foreground font-semibold">{course.instructorName}</span>
+                </span>
               </div>
             </div>
 
-            {/* Course Thumbnail Card */}
-            <div className="w-full md:w-96 flex-shrink-0">
-              <div className="rounded-xl overflow-hidden border border-border shadow-2xl bg-card">
-                <div className="aspect-video bg-muted relative">
-                  {course.thumbnailUrl && (
-                    <img 
-                      src={course.thumbnailUrl} 
-                      alt={course.title} 
-                      className="w-full h-full object-cover"
-                    />
+            {/* Sticky course card */}
+            <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
+              <div className="rounded-xl border border-border shadow-md bg-white overflow-hidden">
+                <div className="aspect-video relative bg-secondary">
+                  {course.thumbnailUrl ? (
+                    <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                      <Play className="w-12 h-12 text-primary/30" />
+                    </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Play className="w-16 h-16 text-white opacity-80" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                    <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                      <Play className="h-6 w-6 fill-primary text-primary ml-0.5" />
+                    </div>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-2xl">
-                      {course.priceStrategy === "FREE" ? "Free" : "Premium"}
+                <div className="p-5 space-y-4">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-xl font-bold">
+                      {course.priceStrategy === "FREE" ? "Free" : "Premium Content"}
                     </span>
+                    {course.priceStrategy === "FREE" && (
+                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold">FREE</Badge>
+                    )}
                   </div>
-                  <Button className="w-full size-lg text-lg font-bold" disabled>
-                    Scroll down to purchase
-                  </Button>
+                  <p className="text-xs text-muted-foreground text-center border border-dashed border-border rounded-lg py-3 px-2">
+                    Purchase individual seasons or episodes below
+                  </p>
                   <p className="text-xs text-center text-muted-foreground">
                     30-Day Money-Back Guarantee
                   </p>
@@ -187,87 +202,110 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Curriculum Content */}
-      <div className="container mx-auto px-4 py-12">
-        <div className="max-w-4xl">
-          <h2 className="text-2xl font-bold mb-6">Course Content</h2>
-          
-          <Accordion type="single" collapsible className="w-full space-y-4">
+      {/* Curriculum */}
+      <div className="container mx-auto px-4 lg:px-6 py-10">
+        <div className="max-w-3xl">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <BookOpen className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Course Curriculum</h2>
+              <p className="text-xs text-muted-foreground">{totalEpisodes} lessons across {seasons.length} seasons</p>
+            </div>
+          </div>
+
+          <Accordion type="single" collapsible className="space-y-3">
             {enrichedSeasons.map((season) => (
-              <AccordionItem key={season.id} value={`season-${season.id}`} className="border rounded-lg px-4 bg-card">
-                <AccordionTrigger className="hover:no-underline py-4">
-                  <div className="flex flex-1 items-center justify-between mr-4">
-                    <span className="font-semibold text-lg">
-                      Season {season.seasonNumber}: {season.title}
-                    </span>
-                    <div className="flex items-center gap-4">
-                      <Badge variant="outline">{season.episodes.length} Episodes</Badge>
+              <AccordionItem
+                key={season.id}
+                value={`season-${season.id}`}
+                className="border border-border rounded-xl px-0 overflow-hidden bg-card shadow-sm"
+              >
+                <AccordionTrigger className="hover:no-underline px-5 py-4 hover:bg-secondary/50 transition-colors">
+                  <div className="flex flex-1 items-center justify-between mr-4 gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
+                        {season.seasonNumber}
+                      </div>
+                      <span className="font-semibold text-sm text-left truncate">
+                        {season.title}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
                       {season.isUnlocked ? (
-                        <Badge variant="outline" className="text-green-500 border-green-500">
-                          <CheckCircle className="w-3 h-3 mr-1" /> Unlocked
-                        </Badge>
+                        <span className="badge-success">
+                          <CheckCircle className="w-3 h-3" /> Unlocked
+                        </span>
                       ) : season.isPending ? (
-                        <Badge variant="outline" className="text-orange-500 border-orange-500">
-                          <AlertCircle className="w-3 h-3 mr-1" /> Pending Approval
-                        </Badge>
+                        <span className="badge-warning">
+                          <AlertCircle className="w-3 h-3" /> Pending
+                        </span>
                       ) : (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
+                          className="h-7 text-xs px-3 rounded-lg"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleBuyInitiate("SEASON", season.id, season.price);
                           }}
                           disabled={buyMutation.isPending}
                         >
-                          Buy Season ({season.price} ETB)
+                          {season.price} ETB
                         </Button>
                       )}
                     </div>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="pt-2 pb-6">
-                  <div className="space-y-2">
+                <AccordionContent className="px-5 pb-4 pt-1">
+                  <Separator className="mb-3" />
+                  <div className="space-y-1.5">
                     {season.episodes.map((ep) => (
-                      <div 
-                        key={ep.id} 
-                        className="flex items-center justify-between p-3 rounded-md hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50"
+                      <div
+                        key={ep.id}
+                        className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/60 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="h-7 w-7 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
                             {ep.episodeNumber}
                           </div>
-                          <div>
-                            <p className="font-medium text-sm flex items-center gap-2">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate flex items-center gap-1.5">
                               {ep.title}
-                              {ep.isPreview && <Badge variant="secondary" className="text-[10px] h-4">Preview</Badge>}
+                              {ep.isPreview && (
+                                <span className="badge-info text-[10px]">Preview</span>
+                              )}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {ep.durationSec >= 60 
-                                ? `${Math.floor(ep.durationSec / 60)} mins` 
-                                : `${ep.durationSec} secs`}
+                              {ep.durationSec >= 60
+                                ? `${Math.floor(ep.durationSec / 60)} min`
+                                : `${ep.durationSec} sec`}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           {ep.isUnlocked ? (
                             <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
-                              <Button size="sm" variant="ghost" className="text-primary hover:text-primary/80">
-                                <Play className="w-4 h-4 mr-2" /> {ep.isPreview ? "Watch Preview" : "Watch"}
+                              <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1">
+                                <Play className="w-3 h-3 fill-current" />
+                                {ep.isPreview ? "Preview" : "Watch"}
                               </Button>
                             </Link>
                           ) : ep.isPending ? (
-                            <Badge variant="outline" className="text-orange-500 border-orange-500">
-                              <AlertCircle className="w-3 h-3 mr-1" /> Pending Approval
-                            </Badge>
+                            <span className="badge-warning text-[10px]">
+                              <AlertCircle className="w-3 h-3" /> Pending
+                            </span>
                           ) : (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1"
                               onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
                               disabled={buyMutation.isPending}
                             >
-                              <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price} ETB)
+                              <Lock className="w-3 h-3" /> {ep.price} ETB
                             </Button>
                           )}
                         </div>

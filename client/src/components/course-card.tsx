@@ -1,6 +1,5 @@
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Users, Star } from "lucide-react";
+import { Play, Users, Star, Lock } from "lucide-react";
 import { Link } from "wouter";
 import { Course, Category } from "@shared/schema";
 import { motion } from "framer-motion";
@@ -11,73 +10,89 @@ interface CourseCardProps {
 }
 
 export function CourseCard({ course, isPurchased }: CourseCardProps) {
+  const href = isPurchased ? `/dashboard/course/${course.id}` : `/course/${course.slug}`;
+  const isFree = course.priceStrategy === "FREE";
+
   return (
-    <Link href={isPurchased ? `/dashboard/course/${course.id}` : `/course/${course.slug}`}>
+    <Link href={href}>
       <motion.div
-        whileHover={{ y: -8 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
         className="cursor-pointer group h-full"
       >
-        <Card className="h-full flex flex-col overflow-hidden border-white/5 bg-white/[0.02] backdrop-blur-sm group-hover:bg-white/[0.05] group-hover:border-primary/30 transition-all duration-500 rounded-2xl">
-          <div className="relative aspect-video overflow-hidden bg-slate-900">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60 z-10"></div>
+        <div className="h-full flex flex-col rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden">
+
+          {/* Thumbnail */}
+          <div className="relative aspect-video overflow-hidden bg-secondary flex-shrink-0">
             {course.thumbnailUrl ? (
-              <img 
-                src={course.thumbnailUrl} 
+              <img
+                src={course.thumbnailUrl}
                 alt={course.title}
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-secondary">
-                <Play className="w-12 h-12 text-muted-foreground/50" />
+              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                <Play className="w-10 h-10 text-primary/30" />
               </div>
             )}
-            
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20">
-              <div className="h-14 w-14 rounded-full bg-primary/90 text-white flex items-center justify-center shadow-2xl scale-75 group-hover:scale-100 transition-transform duration-500">
-                <Play className="h-6 w-6 fill-current ml-1" />
+
+            {/* Hover overlay */}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="h-12 w-12 rounded-full bg-white/95 flex items-center justify-center shadow-lg">
+                <Play className="h-5 w-5 fill-primary text-primary ml-0.5" />
               </div>
             </div>
 
-            {course.category && (
-              <Badge className="absolute top-4 left-4 z-20 bg-white/10 hover:bg-white/20 text-white border-none backdrop-blur-md px-3 py-1 rounded-lg font-bold">
-                {course.category.name}
-              </Badge>
-            )}
+            {/* Badges */}
+            <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2 z-10">
+              {course.category && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-black/50 text-white backdrop-blur-sm">
+                  {course.category.name}
+                </span>
+              )}
+              <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold backdrop-blur-sm ${
+                isFree
+                  ? "bg-emerald-500/90 text-white"
+                  : "bg-primary/90 text-white"
+              }`}>
+                {isFree ? "FREE" : "PREMIUM"}
+              </span>
+            </div>
 
-            <Badge className="absolute top-4 right-4 z-20 bg-primary/20 hover:bg-primary/20 text-primary border-none backdrop-blur-md px-3 py-1 rounded-lg font-bold">
-              {course.priceStrategy === "FREE" ? "FREE" : "PREMIUM"}
-            </Badge>
+            {isPurchased && (
+              <div className="absolute bottom-3 left-3">
+                <span className="badge-success">Enrolled</span>
+              </div>
+            )}
           </div>
 
-          <CardHeader className="p-6 pb-2 space-y-2">
-            <h3 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors line-clamp-2">
+          {/* Content */}
+          <div className="flex flex-col flex-1 p-4 gap-2">
+            <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
               {course.title}
             </h3>
-            <p className="text-sm text-slate-400 font-light">
-              By {course.instructorName}
+            <p className="text-xs text-muted-foreground">
+              by {course.instructorName}
             </p>
-          </CardHeader>
+            {course.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1">
+                {course.description}
+              </p>
+            )}
 
-          <CardContent className="p-6 pt-2 flex-grow">
-            <p className="text-sm text-slate-400 line-clamp-2 font-light leading-relaxed">
-              {course.description}
-            </p>
-          </CardContent>
-
-          <CardFooter className="p-6 pt-0 mt-auto border-t border-white/5">
-            <div className="flex items-center justify-between w-full mt-4 text-slate-500 text-xs font-medium">
-              <div className="flex items-center gap-1.5">
+            {/* Footer stats */}
+            <div className="flex items-center justify-between pt-2 mt-auto border-t border-border">
+              <div className="flex items-center gap-1 text-muted-foreground">
                 <Users className="h-3.5 w-3.5" />
-                <span>1.2k Learners</span>
+                <span className="text-xs font-medium">1.2k learners</span>
               </div>
-              <div className="flex items-center gap-1.5 text-amber-400/80">
+              <div className="flex items-center gap-1 text-amber-500">
                 <Star className="h-3.5 w-3.5 fill-current" />
-                <span>4.9</span>
+                <span className="text-xs font-semibold">4.9</span>
               </div>
             </div>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </motion.div>
     </Link>
   );

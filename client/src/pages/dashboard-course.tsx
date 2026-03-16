@@ -1,17 +1,17 @@
 import { Navbar } from "@/components/layout-nav";
 import { useDashboardCourse, useBuyItem } from "@/hooks/use-courses";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlayCircle, Lock } from "lucide-react";
+import { Loader2, PlayCircle, Lock, ChevronLeft, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { PaymentPanel } from "@/components/payment-panel";
 import { useState } from "react";
 
 export default function DashboardCourse() {
   const [, params] = useRoute("/dashboard/course/:id");
   const id = params?.id ? parseInt(params.id) : 0;
-  
+
   const { data, isLoading } = useDashboardCourse(id);
   const buyMutation = useBuyItem();
 
@@ -20,46 +20,56 @@ export default function DashboardCourse() {
     itemType: "SEASON" | "EPISODE" | null;
     itemId: number | null;
     amount: string;
-  }>({
-    isOpen: false,
-    itemType: null,
-    itemId: null,
-    amount: ""
-  });
+  }>({ isOpen: false, itemType: null, itemId: null, amount: "" });
 
-  if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
-  if (!data) return <div>Not found</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-muted-foreground">Course not found.</p>
+        </div>
+      </div>
+    );
+  }
 
   const { course, seasons } = data;
 
+  const totalEpisodes = seasons.reduce((acc: number, s: any) => acc + s.episodes.length, 0);
+  const unlockedEpisodes = seasons.reduce(
+    (acc: number, s: any) => acc + s.episodes.filter((e: any) => e.isUnlocked).length,
+    0
+  );
+  const progressPct = totalEpisodes > 0 ? Math.round((unlockedEpisodes / totalEpisodes) * 100) : 0;
+
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
-    setPaymentState({
-      isOpen: true,
-      itemType,
-      itemId,
-      amount
-    });
+    setPaymentState({ isOpen: true, itemType, itemId, amount });
   };
 
   const handlePaymentConfirm = (transactionRef: string) => {
     if (!paymentState.itemType || !paymentState.itemId) return;
-    
-    buyMutation.mutate({ 
-      itemType: paymentState.itemType, 
-      itemId: paymentState.itemId, 
-      amount: paymentState.amount,
-    }, {
-      onSuccess: () => {
-        setPaymentState(prev => ({ ...prev, isOpen: false }));
-      }
-    });
+    buyMutation.mutate(
+      { itemType: paymentState.itemType, itemId: paymentState.itemId, amount: paymentState.amount },
+      { onSuccess: () => setPaymentState(prev => ({ ...prev, isOpen: false })) }
+    );
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <PaymentPanel 
+      <PaymentPanel
         isOpen={paymentState.isOpen}
         onClose={() => setPaymentState(prev => ({ ...prev, isOpen: false }))}
         itemType={paymentState.itemType || "SEASON"}
@@ -68,100 +78,140 @@ export default function DashboardCourse() {
         onConfirm={handlePaymentConfirm}
         isPending={buyMutation.isPending}
       />
-      
-      <div className="bg-muted/30 border-b border-border py-12">
-        <div className="container mx-auto px-4">
-          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground mb-4 inline-block">
-            &larr; Back to Dashboard
-          </Link>
-          <h1 className="text-3xl font-bold mb-4">{course.title}</h1>
-          <div className="h-2 w-full max-w-xl bg-muted rounded-full overflow-hidden">
-            <div className="h-full bg-primary w-[35%]" /> {/* Mock progress */}
+
+      <div className="mt-16">
+        {/* Header */}
+        <div className="border-b border-border bg-card">
+          <div className="container mx-auto px-4 lg:px-6 py-7">
+            <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors mb-4">
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back to My Learning
+            </Link>
+
+            <h1 className="text-2xl font-bold tracking-tight mb-4">{course.title}</h1>
+
+            {/* Progress */}
+            <div className="max-w-sm space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{unlockedEpisodes} of {totalEpisodes} episodes unlocked</span>
+                <span className="font-semibold text-foreground">{progressPct}%</span>
+              </div>
+              <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">35% Complete</p>
         </div>
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <Accordion type="single" collapsible className="space-y-4 max-w-4xl">
-          {seasons.map((season) => (
-            <AccordionItem key={season.id} value={`season-${season.id}`} className="border rounded-lg px-4 bg-card">
-              <AccordionTrigger className="hover:no-underline py-4">
-                <div className="flex flex-1 items-center justify-between mr-4">
-                  <span className="font-semibold text-lg">
-                    Season {season.seasonNumber}: {season.title}
-                  </span>
-                  {!season.isUnlocked && (
-                    <div className="flex items-center gap-2">
-                      {season.isPending ? (
-                        <Badge variant="outline" className="text-orange-500 border-orange-500">
-                          Pending Approval
-                        </Badge>
-                      ) : (
-                        <Button 
-                          size="sm" 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBuyInitiate("SEASON", season.id, season.price);
-                          }}
-                          disabled={buyMutation.isPending}
-                        >
-                          Unlock Season ({season.price})
-                        </Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="pb-4 pt-2">
-                <div className="space-y-2">
-                  {season.episodes.map((ep) => (
-                    <div 
-                      key={ep.id} 
-                      className={`flex items-center justify-between p-3 rounded-md border ${
-                        ep.isUnlocked ? "bg-muted/30 border-transparent hover:bg-muted/50" : "bg-muted/10 border-border/40 opacity-70"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium ${
-                          ep.isUnlocked ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                        }`}>
-                          {ep.episodeNumber}
+        {/* Content */}
+        <div className="container mx-auto px-4 lg:px-6 py-8">
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <BookOpen className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold">Course Content</h2>
+                <p className="text-xs text-muted-foreground">{seasons.length} seasons</p>
+              </div>
+            </div>
+
+            <Accordion type="single" collapsible className="space-y-3">
+              {seasons.map((season: any) => (
+                <AccordionItem
+                  key={season.id}
+                  value={`season-${season.id}`}
+                  className="border border-border rounded-xl px-0 overflow-hidden bg-card shadow-sm"
+                >
+                  <AccordionTrigger className="hover:no-underline px-5 py-4 hover:bg-secondary/50 transition-colors">
+                    <div className="flex flex-1 items-center justify-between mr-4 gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+                          {season.seasonNumber}
                         </div>
-                        <span className="font-medium">{ep.title}</span>
+                        <span className="font-semibold text-sm text-left truncate">{season.title}</span>
                       </div>
-
-                      {ep.isUnlocked ? (
-                        <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
-                          <Button size="sm">
-                            <PlayCircle className="w-4 h-4 mr-2" /> Watch
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {season.isUnlocked ? (
+                          <span className="badge-success">
+                            <CheckCircle className="w-3 h-3" /> Unlocked
+                          </span>
+                        ) : season.isPending ? (
+                          <span className="badge-warning">
+                            <AlertCircle className="w-3 h-3" /> Pending
+                          </span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="h-7 text-xs px-3 rounded-lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBuyInitiate("SEASON", season.id, season.price);
+                            }}
+                            disabled={buyMutation.isPending}
+                          >
+                            Unlock — {season.price} ETB
                           </Button>
-                        </Link>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          {ep.isPending ? (
-                            <Badge variant="outline" className="text-orange-500 border-orange-500">
-                              Pending Approval
-                            </Badge>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
-                              disabled={buyMutation.isPending}
-                            >
-                              <Lock className="w-3 h-3 mr-2" /> Buy ({ep.price})
-                            </Button>
-                          )}
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-4 pt-1">
+                    <Separator className="mb-3" />
+                    <div className="space-y-1.5">
+                      {season.episodes.map((ep: any) => (
+                        <div
+                          key={ep.id}
+                          className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                            ep.isUnlocked ? "hover:bg-secondary/60" : "opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                              ep.isUnlocked
+                                ? "bg-primary/10 text-primary"
+                                : "bg-secondary text-muted-foreground"
+                            }`}>
+                              {ep.isUnlocked ? <PlayCircle className="h-4 w-4" /> : ep.episodeNumber}
+                            </div>
+                            <span className="text-sm font-medium truncate">{ep.title}</span>
+                          </div>
+
+                          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                            {ep.isUnlocked ? (
+                              <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
+                                <Button size="sm" className="h-7 text-xs gap-1">
+                                  <PlayCircle className="h-3 w-3" /> Watch
+                                </Button>
+                              </Link>
+                            ) : ep.isPending ? (
+                              <span className="badge-warning text-[10px]">
+                                <AlertCircle className="w-3 h-3" /> Pending
+                              </span>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs gap-1"
+                                onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
+                                disabled={buyMutation.isPending}
+                              >
+                                <Lock className="w-3 h-3" /> {ep.price} ETB
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </div>
       </div>
     </div>
   );
