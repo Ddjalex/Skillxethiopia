@@ -535,6 +535,9 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Updated", description: "Season updated successfully" });
       setOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to update season", variant: "destructive" });
     }
   });
 
@@ -550,7 +553,7 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
       </DialogTrigger>
       <DialogContent>
         <DialogHeader><DialogTitle>Edit Season</DialogTitle></DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => updateSeason.mutate(data))} className="space-y-4 mt-2">
+        <form onSubmit={form.handleSubmit((data) => updateSeason.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="space-y-4 mt-2">
           <div className="space-y-1.5">
             <Label>Season Title</Label>
             <Input {...form.register("title")} className="h-10" />
@@ -587,6 +590,9 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
       toast({ title: "Updated", description: "Episode updated successfully" });
       setOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to update episode", variant: "destructive" });
     }
   });
 
@@ -608,7 +614,7 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader><DialogTitle>Edit Episode</DialogTitle></DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => updateEpisode.mutate(data))} className="grid grid-cols-2 gap-4 mt-2">
+        <form onSubmit={form.handleSubmit((data) => updateEpisode.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="grid grid-cols-2 gap-4 mt-2">
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input {...form.register("title")} className="h-10" />
@@ -987,6 +993,9 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       queryClient.invalidateQueries({ queryKey: [api.public.courses.path] });
       toast({ title: "Updated", description: "Course updated successfully" });
       setOpen(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to update course", variant: "destructive" });
     }
   });
 
@@ -1006,7 +1015,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader><DialogTitle>Edit Course</DialogTitle></DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data))} className="grid grid-cols-2 gap-4 mt-2">
+        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="grid grid-cols-2 gap-4 mt-2">
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input {...form.register("title")} className="h-10" />
@@ -1282,6 +1291,9 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
       toast({ title: "Success", description: "Episode added" });
       setOpen(false);
       form.reset();
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to add episode", variant: "destructive" });
     }
   });
 
