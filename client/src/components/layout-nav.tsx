@@ -10,13 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Search, User, LogOut, Menu, X, LayoutDashboard, ShieldCheck, BookOpen } from "lucide-react";
+import { Search, LogOut, Menu, X, LayoutDashboard, ShieldCheck, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function Navbar() {
   const { user, logoutMutation } = useAuth();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -28,43 +28,27 @@ export function Navbar() {
     }
   };
 
-  const isDarkPage = location === "/";
-
   return (
-    <nav className={`fixed top-0 z-50 w-full transition-all duration-300 ${
-      isDarkPage
-        ? "border-b border-white/5 bg-[#020617]/80 backdrop-blur-xl"
-        : "border-b border-border bg-white/90 backdrop-blur-xl shadow-sm"
-    }`}>
+    <nav className="fixed top-0 z-50 w-full border-b border-border bg-white/90 backdrop-blur-xl shadow-sm">
       <div className="container mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-          <div className={`flex items-center justify-center h-9 w-9 rounded-xl text-white shadow-sm group-hover:scale-105 transition-transform ${
-            isDarkPage ? "bg-primary" : "bg-primary"
-          }`}>
+          <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white shadow-sm group-hover:scale-105 transition-transform">
             <span className="text-base font-black">SX</span>
           </div>
-          <span className={`font-extrabold tracking-tight text-lg hidden sm:block ${
-            isDarkPage ? "text-white" : "text-foreground"
-          }`}>
-            Skillx<span className={isDarkPage ? "text-slate-400" : "text-muted-foreground"}>ethiopia</span>
+          <span className="font-extrabold tracking-tight text-lg hidden sm:block text-foreground">
+            Skillx<span className="text-muted-foreground">ethiopia</span>
           </span>
         </Link>
 
         {/* Center Search (desktop) */}
         <div className="hidden md:flex flex-1 max-w-sm mx-4">
           <form onSubmit={handleSearch} className="relative w-full">
-            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${
-              isDarkPage ? "text-slate-500" : "text-muted-foreground"
-            }`} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search courses..."
-              className={`pl-10 h-9 rounded-xl text-sm ${
-                isDarkPage
-                  ? "bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:bg-white/10 focus:border-white/20"
-                  : "bg-secondary border-border"
-              }`}
+              className="pl-10 h-9 rounded-xl text-sm bg-secondary border-border"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -77,11 +61,7 @@ export function Navbar() {
             <Button
               variant="ghost"
               size="sm"
-              className={`font-medium text-sm rounded-lg ${
-                isDarkPage
-                  ? "text-slate-300 hover:text-white hover:bg-white/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-              }`}
+              className="font-medium text-sm rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
             >
               Browse
             </Button>
@@ -93,11 +73,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`font-medium text-sm rounded-lg ${
-                    isDarkPage
-                      ? "text-slate-300 hover:text-white hover:bg-white/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
+                  className="font-medium text-sm rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary"
                 >
                   My Learning
                 </Button>
@@ -148,11 +124,7 @@ export function Navbar() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={`font-semibold text-sm ${
-                    isDarkPage
-                      ? "text-slate-300 hover:text-white hover:bg-white/10"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  }`}
+                  className="font-semibold text-sm text-muted-foreground hover:text-foreground hover:bg-secondary"
                 >
                   Log in
                 </Button>
@@ -168,11 +140,7 @@ export function Navbar() {
 
         {/* Mobile Toggle */}
         <button
-          className={`md:hidden p-2 rounded-lg transition-colors ${
-            isDarkPage
-              ? "text-slate-400 hover:text-white hover:bg-white/10"
-              : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-          }`}
+          className="md:hidden p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
           {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -181,11 +149,7 @@ export function Navbar() {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className={`md:hidden border-t p-4 space-y-3 ${
-          isDarkPage
-            ? "border-white/5 bg-[#020617]"
-            : "border-border bg-white"
-        }`}>
+        <div className="md:hidden border-t border-border bg-white p-4 space-y-3">
           <form onSubmit={handleSearch} className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
