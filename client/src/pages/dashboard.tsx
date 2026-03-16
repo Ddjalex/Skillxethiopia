@@ -30,12 +30,6 @@ export default function Dashboard() {
                   Continue where you left off
                 </p>
               </div>
-              <Link href="/browse">
-                <Button size="sm" variant="outline" className="gap-2 self-start">
-                  <Compass className="h-4 w-4" />
-                  Explore Courses
-                </Button>
-              </Link>
             </div>
 
             {/* Stats row */}

@@ -1,15 +1,16 @@
-import { Badge } from "@/components/ui/badge";
-import { Play, Users, Star, Lock } from "lucide-react";
+import { Play, Users, Star } from "lucide-react";
 import { Link } from "wouter";
 import { Course, Category } from "@shared/schema";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface CourseCardProps {
   course: Course & { category?: Category };
   isPurchased?: boolean;
+  dark?: boolean;
 }
 
-export function CourseCard({ course, isPurchased }: CourseCardProps) {
+export function CourseCard({ course, isPurchased, dark }: CourseCardProps) {
   const href = isPurchased ? `/dashboard/course/${course.id}` : `/course/${course.slug}`;
   const isFree = course.priceStrategy === "FREE";
 
@@ -20,10 +21,15 @@ export function CourseCard({ course, isPurchased }: CourseCardProps) {
         transition={{ duration: 0.2, ease: "easeOut" }}
         className="cursor-pointer group h-full"
       >
-        <div className="h-full flex flex-col rounded-xl border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-200 overflow-hidden">
+        <div className={cn(
+          "h-full flex flex-col rounded-xl overflow-hidden transition-all duration-200",
+          dark
+            ? "border border-white/5 bg-white/[0.03] hover:bg-white/[0.06] hover:border-white/10 shadow-lg"
+            : "border border-border bg-card shadow-sm hover:shadow-md hover:border-primary/20"
+        )}>
 
           {/* Thumbnail */}
-          <div className="relative aspect-video overflow-hidden bg-secondary flex-shrink-0">
+          <div className="relative aspect-video overflow-hidden flex-shrink-0 bg-secondary">
             {course.thumbnailUrl ? (
               <img
                 src={course.thumbnailUrl}
@@ -31,7 +37,10 @@ export function CourseCard({ course, isPurchased }: CourseCardProps) {
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+              <div className={cn(
+                "w-full h-full flex items-center justify-center",
+                dark ? "bg-white/[0.03]" : "bg-gradient-to-br from-primary/10 to-primary/5"
+              )}>
                 <Play className="w-10 h-10 text-primary/30" />
               </div>
             )}
@@ -50,11 +59,10 @@ export function CourseCard({ course, isPurchased }: CourseCardProps) {
                   {course.category.name}
                 </span>
               )}
-              <span className={`ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold backdrop-blur-sm ${
-                isFree
-                  ? "bg-emerald-500/90 text-white"
-                  : "bg-primary/90 text-white"
-              }`}>
+              <span className={cn(
+                "ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold backdrop-blur-sm",
+                isFree ? "bg-emerald-500/90 text-white" : "bg-primary/90 text-white"
+              )}>
                 {isFree ? "FREE" : "PREMIUM"}
               </span>
             </div>
@@ -68,21 +76,29 @@ export function CourseCard({ course, isPurchased }: CourseCardProps) {
 
           {/* Content */}
           <div className="flex flex-col flex-1 p-4 gap-2">
-            <h3 className="font-semibold text-sm leading-snug line-clamp-2 text-foreground group-hover:text-primary transition-colors">
+            <h3 className={cn(
+              "font-semibold text-sm leading-snug line-clamp-2 transition-colors",
+              dark
+                ? "text-white/90 group-hover:text-white"
+                : "text-foreground group-hover:text-primary"
+            )}>
               {course.title}
             </h3>
-            <p className="text-xs text-muted-foreground">
+            <p className={cn("text-xs", dark ? "text-slate-400" : "text-muted-foreground")}>
               by {course.instructorName}
             </p>
             {course.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed flex-1">
+              <p className={cn("text-xs line-clamp-2 leading-relaxed flex-1", dark ? "text-slate-500" : "text-muted-foreground")}>
                 {course.description}
               </p>
             )}
 
             {/* Footer stats */}
-            <div className="flex items-center justify-between pt-2 mt-auto border-t border-border">
-              <div className="flex items-center gap-1 text-muted-foreground">
+            <div className={cn(
+              "flex items-center justify-between pt-2 mt-auto border-t",
+              dark ? "border-white/5" : "border-border"
+            )}>
+              <div className={cn("flex items-center gap-1", dark ? "text-slate-500" : "text-muted-foreground")}>
                 <Users className="h-3.5 w-3.5" />
                 <span className="text-xs font-medium">1.2k learners</span>
               </div>
