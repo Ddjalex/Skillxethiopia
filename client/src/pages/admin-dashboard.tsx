@@ -888,8 +888,9 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
 
   const form = useForm({
     resolver: zodResolver(insertCourseSchema),
-    defaultValues: { title: "", slug: "", description: "", instructorName: "", categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID" }
+    defaultValues: { title: "", slug: "", description: "", instructorName: "", categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
   });
+  const watchedPriceStrategy = form.watch("priceStrategy");
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -938,6 +939,12 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                     </SelectContent>
                   </Select>
                 </div>
+                {watchedPriceStrategy === "PAID" && (
+                  <div className="space-y-1.5">
+                    <Label>Price (ETB)</Label>
+                    <Input {...form.register("price")} placeholder="e.g. 500" className="h-10" />
+                  </div>
+                )}
                 <div className="space-y-1.5 col-span-2">
                   <Label>Thumbnail URL</Label>
                   <Input {...form.register("thumbnailUrl")} placeholder="https://..." className="h-10" />
@@ -1110,10 +1117,12 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       title: course.title, slug: course.slug, description: course.description,
       instructorName: course.instructorName, categoryId: course.categoryId,
       thumbnailUrl: course.thumbnailUrl || "", priceStrategy: course.priceStrategy || "PAID",
+      price: course.price || "0",
       introVideoProvider: course.introVideoProvider || "BUNNY",
       introVideoRef: course.introVideoRef || ""
     }
   });
+  const editWatchedPriceStrategy = form.watch("priceStrategy");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -1154,6 +1163,12 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
               </SelectContent>
             </Select>
           </div>
+          {editWatchedPriceStrategy === "PAID" && (
+            <div className="space-y-1.5">
+              <Label>Price (ETB)</Label>
+              <Input {...form.register("price")} className="h-10" />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Thumbnail URL</Label>
             <Input {...form.register("thumbnailUrl")} className="h-10" />

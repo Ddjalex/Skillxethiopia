@@ -41,6 +41,7 @@ export const courses = pgTable("courses", {
   thumbnailUrl: text("thumbnail_url"),
   instructorName: text("instructor_name").notNull(),
   priceStrategy: text("price_strategy").notNull().default("PAID"), // FREE | PAID
+  price: text("price").default("0"), // course-level price in ETB (used when priceStrategy=PAID)
   introVideoProvider: text("intro_video_provider").default("BUNNY"), // BUNNY | YOUTUBE | VIMEO | URL
   introVideoRef: text("intro_video_ref"), // e.g. libraryId/videoId for Bunny
   createdAt: timestamp("created_at").defaultNow(),
