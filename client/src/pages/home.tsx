@@ -47,7 +47,7 @@ const features = [
     icon: Award,
     title: "Earn Certificates",
     desc: "Industry-recognized credentials you can share with employers and clients.",
-    iconBg: "bg-violet-50 text-violet-600",
+    iconBg: "bg-orange-50 text-orange-500",
   },
 ];
 
@@ -80,7 +80,7 @@ export default function Home() {
           >
             Master Skills with
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-indigo-500 to-violet-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-blue-400 to-green-400">
               Premium Content
             </span>
           </motion.h1>
@@ -302,7 +302,7 @@ export default function Home() {
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show"
             viewport={{ once: true }}
-            className="relative max-w-4xl mx-auto overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-indigo-600 to-violet-600 p-12 md:p-20 text-center text-white"
+            className="relative max-w-4xl mx-auto overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 p-12 md:p-20 text-center text-white"
           >
             <div className="pointer-events-none absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl -mr-36 -mt-36" />
             <div className="pointer-events-none absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full blur-3xl -ml-36 -mb-36" />

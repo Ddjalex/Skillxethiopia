@@ -16,34 +16,37 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* Brand */
-    --primary: 217 91% 60%;
+    /* Brand — Blue dominant */
+    --primary: 220 90% 56%;
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary / Accent Surfaces */
+    /* Secondary / Muted Surfaces */
     --secondary: 210 16% 95%;
     --secondary-foreground: 222 47% 11%;
 
     --muted: 210 16% 95%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 217 91% 97%;
-    --accent-foreground: 217 91% 40%;
+    /* Accent — Orange tactical */
+    --accent: 24 95% 53%;
+    --accent-foreground: 0 0% 100%;
 
     /* Semantic */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%;
+    /* Success — Green supportive */
+    --success: 145 63% 42%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
+    /* Warning — Orange tactical */
+    --warning: 24 95% 53%;
     --warning-foreground: 0 0% 100%;
 
     /* UI Chrome */
     --border: 214 20% 90%;
     --input: 214 20% 90%;
-    --ring: 217 91% 60%;
+    --ring: 220 90% 56%;
 
     /* Radius System */
     --radius: 0.75rem;
@@ -62,12 +65,12 @@
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 220 90% 56%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 16% 95%;
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 20% 90%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 220 90% 56%;
   }
 
   .dark {
@@ -77,28 +80,36 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 7%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 11%;
+    /* Blue dominant */
+    --primary: 220 90% 60%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    /* Orange tactical */
+    --accent: 24 90% 58%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 63% 31%;
     --destructive-foreground: 210 40% 98%;
+    /* Green supportive */
+    --success: 145 60% 48%;
+    --success-foreground: 0 0% 100%;
+    /* Orange tactical */
+    --warning: 24 90% 58%;
+    --warning-foreground: 0 0% 100%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 220 90% 60%;
 
     --sidebar-background: 222 47% 6%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 220 90% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 15%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 220 90% 60%;
   }
 }
 
@@ -157,11 +168,11 @@
 
   /* Badges */
   .badge-success {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200;
   }
 
   .badge-warning {
-    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-200;
   }
 
   .badge-info {
@@ -224,7 +235,11 @@
 
   /* Text gradient */
   .text-gradient-blue {
-    @apply text-transparent bg-clip-text bg-gradient-to-br from-blue-400 via-indigo-400 to-purple-400;
+    @apply text-transparent bg-clip-text bg-gradient-to-br from-blue-500 via-blue-400 to-green-400;
+  }
+
+  .text-gradient-brand {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500;
   }
 
   /* Focus ring */

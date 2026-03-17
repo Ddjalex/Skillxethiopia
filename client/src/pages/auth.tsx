@@ -36,7 +36,7 @@ export default function AuthPage() {
       <div className="hidden lg:flex w-[46%] flex-col bg-[#020617] text-white relative overflow-hidden p-10 xl:p-16">
         {/* Background blobs */}
         <div className="absolute top-[-15%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-purple-600/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-green-600/10 rounded-full blur-[100px] pointer-events-none" />
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 mb-auto">
@@ -57,7 +57,7 @@ export default function AuthPage() {
           <h1 className="text-4xl xl:text-5xl font-black leading-tight tracking-tight">
             Master Skills with
             <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-300 to-green-400">
               Premium Content
             </span>
           </h1>
