@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             <span className="text-sm font-black">SX</span>
           </div>
           <div>
-            <p className="font-bold text-sm leading-none"><span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>x</span><span style={{ color: "#DA121A" }}>ethiopia</span></p>
+            <p className="font-bold text-sm leading-none"><span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span></p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Admin Panel</p>
           </div>
         </div>

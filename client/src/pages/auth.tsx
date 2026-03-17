@@ -44,7 +44,7 @@ export default function AuthPage() {
             <span className="text-lg font-black">SX</span>
           </div>
           <span className="font-extrabold text-xl tracking-tight">
-            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>x</span><span style={{ color: "#DA121A" }}>ethiopia</span>
+            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span>
           </span>
         </Link>
 
@@ -83,7 +83,7 @@ export default function AuthPage() {
 
         {/* Footer note */}
         <p className="mt-8 text-xs text-slate-500">
-          © {new Date().getFullYear()} Skillxethiopia — Elevating Ethiopian Excellence
+          © {new Date().getFullYear()} SkillXethiopia — Elevating Ethiopian Excellence
         </p>
       </div>
 
@@ -97,7 +97,7 @@ export default function AuthPage() {
               <span className="text-base font-black">SX</span>
             </div>
             <span className="font-extrabold text-lg tracking-tight text-foreground">
-              Skillxethiopia
+              SkillXethiopia
             </span>
           </div>
 

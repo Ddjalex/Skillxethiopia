@@ -6,7 +6,7 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import {
   ArrowRight, Sparkles, Zap, Globe, Loader2, MonitorPlay,
-  Play, Star, TrendingUp, Award, BookOpen, CheckCircle, ChevronRight
+  Play, Star, TrendingUp, BookOpen, CheckCircle, ChevronRight
 } from "lucide-react";
 
 const fadeUp = {
@@ -42,12 +42,6 @@ const features = [
     title: "4K Video Content",
     desc: "Crystal-clear cinematic video lessons optimized for any device, anywhere.",
     iconBg: "bg-emerald-50 text-emerald-600",
-  },
-  {
-    icon: Award,
-    title: "Earn Certificates",
-    desc: "Industry-recognized credentials you can share with employers and clients.",
-    iconBg: "bg-orange-50 text-orange-500",
   },
 ];
 
@@ -186,7 +180,7 @@ export default function Home() {
             variants={fadeUp} initial="hidden" whileInView="show"
             viewport={{ once: true }} className="text-center mb-14"
           >
-            <p className="section-label mb-3">Why Skillxethiopia</p>
+            <p className="section-label mb-3">Why SkillXethiopia</p>
             <h2 className="text-4xl font-black">Unmatched Learning Experience</h2>
           </motion.div>
 
@@ -337,7 +331,7 @@ export default function Home() {
                 <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white flex-shrink-0">
                   <span className="font-black text-base">SX</span>
                 </div>
-                <span className="tracking-tight text-foreground">Skillxethiopia</span>
+                <span className="tracking-tight text-foreground">SkillXethiopia</span>
               </Link>
               <p className="text-muted-foreground max-w-xs leading-relaxed text-sm">
                 Empowering the youth of Ethiopia through world-class digital education and skill development.
@@ -367,7 +361,7 @@ export default function Home() {
             </div>
           </div>
           <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-3 text-muted-foreground text-xs">
-            <p>&copy; {new Date().getFullYear()} Skillxethiopia. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} SkillXethiopia. All rights reserved.</p>
             <p>Elevating Ethiopian Excellence.</p>
           </div>
         </div>

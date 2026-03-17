@@ -38,7 +38,7 @@ export function Navbar() {
             <span className="text-base font-black">SX</span>
           </div>
           <span className="font-extrabold tracking-tight text-lg hidden sm:block">
-            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>x</span><span style={{ color: "#DA121A" }}>ethiopia</span>
+            <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span>
           </span>
         </Link>
 
