@@ -330,8 +330,8 @@ export default function CourseDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          {isFree || ep.isUnlocked ? (
-                            <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
+                          {isFree || ep.isUnlocked || ep.isPreview ? (
+                            <Link href={ep.isPreview && !ep.isUnlocked ? `/video/${ep.id}` : `/dashboard/course/${course.id}/episode/${ep.id}`}>
                               <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1">
                                 <Play className="w-3 h-3 fill-current" />
                                 {ep.isPreview ? "Preview" : "Watch"}

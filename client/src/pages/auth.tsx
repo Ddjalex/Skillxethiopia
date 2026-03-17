@@ -8,13 +8,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, insertUserSchema } from "@shared/routes";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
-import { Loader2, Sparkles, BookOpen, Users, Trophy } from "lucide-react";
+import { Loader2, Sparkles, BookOpen, Users } from "lucide-react";
 import { Link } from "wouter";
 
 const features = [
   { icon: BookOpen, label: "Premium Courses", desc: "Hand-crafted by expert instructors" },
   { icon: Users, label: "50K+ Learners", desc: "Growing community of professionals" },
-  { icon: Trophy, label: "Certificates", desc: "Industry-recognized credentials" },
 ];
 
 export default function AuthPage() {

@@ -275,11 +275,22 @@ export async function registerRoutes(
     }
   });
 
-  app.get(api.protected.stream.path, requireAuth, async (req, res) => {
-    const userId = (req.user as any).id;
+  app.get(api.protected.stream.path, async (req, res) => {
     const episodeId = Number(req.params.id);
     const episode = await storage.getEpisode(episodeId);
     if (!episode) return res.status(404).json({ message: "Not found" });
+
+    // Preview episodes are always accessible without login or purchase
+    if (episode.isPreview) {
+      return res.json({ videoProvider: episode.videoProvider, videoRef: episode.videoRef });
+    }
+
+    // All other episodes require authentication
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const userId = (req.user as any).id;
 
     // Verify access before showing video ref
     let hasAccess = false;
