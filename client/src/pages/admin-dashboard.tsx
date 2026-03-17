@@ -946,6 +946,22 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                   <Label>Thumbnail URL</Label>
                   <Input {...form.register("thumbnailUrl")} placeholder="https://..." className="h-10" />
                 </div>
+                <div className="space-y-1.5">
+                  <Label>Intro Video Provider</Label>
+                  <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue="BUNNY">
+                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                      <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                      <SelectItem value="VIMEO">Vimeo</SelectItem>
+                      <SelectItem value="URL">Direct URL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                  <Input {...form.register("introVideoRef")} placeholder="libraryId/videoId for Bunny" className="h-10" />
+                </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label>Description</Label>
                   <Textarea {...form.register("description")} placeholder="Describe the course..." rows={3} className="resize-none" />
@@ -1097,7 +1113,9 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
     defaultValues: {
       title: course.title, slug: course.slug, description: course.description,
       instructorName: course.instructorName, categoryId: course.categoryId,
-      thumbnailUrl: course.thumbnailUrl || "", priceStrategy: course.priceStrategy || "PAID"
+      thumbnailUrl: course.thumbnailUrl || "", priceStrategy: course.priceStrategy || "PAID",
+      introVideoProvider: course.introVideoProvider || "BUNNY",
+      introVideoRef: course.introVideoRef || ""
     }
   });
 
@@ -1143,6 +1161,22 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
           <div className="space-y-1.5">
             <Label>Thumbnail URL</Label>
             <Input {...form.register("thumbnailUrl")} className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Intro Video Provider</Label>
+            <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue={course.introVideoProvider || "BUNNY"}>
+              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                <SelectItem value="VIMEO">Vimeo</SelectItem>
+                <SelectItem value="URL">Direct URL</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
+            <Input {...form.register("introVideoRef")} placeholder="e.g. 617163/3793f824-8eea-4af6-a7d1-7f080dee5729" className="h-10" />
           </div>
           <div className="space-y-1.5 col-span-2">
             <Label>Description</Label>

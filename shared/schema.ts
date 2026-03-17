@@ -41,6 +41,8 @@ export const courses = pgTable("courses", {
   thumbnailUrl: text("thumbnail_url"),
   instructorName: text("instructor_name").notNull(),
   priceStrategy: text("price_strategy").notNull().default("PAID"), // FREE | PAID
+  introVideoProvider: text("intro_video_provider").default("BUNNY"), // BUNNY | YOUTUBE | VIMEO | URL
+  introVideoRef: text("intro_video_ref"), // e.g. libraryId/videoId for Bunny
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -100,7 +102,10 @@ export const loginSchema = z.object({
 });
 
 export const insertCategorySchema = createInsertSchema(categories).omit({ id: true });
-export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true });
+export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true }).extend({
+  introVideoRef: z.string().optional().nullable().transform(v => v === "" ? null : v),
+  introVideoProvider: z.string().optional().nullable(),
+});
 export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
 export const insertEpisodeSchema = createInsertSchema(episodes).omit({ id: true, createdAt: true });
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({ id: true, createdAt: true, status: true }).extend({

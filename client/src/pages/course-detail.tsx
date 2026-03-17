@@ -169,18 +169,41 @@ export default function CourseDetailPage() {
             <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
               <div className="rounded-xl border border-border shadow-md bg-white overflow-hidden">
                 <div className="aspect-video relative bg-secondary">
-                  {course.thumbnailUrl ? (
-                    <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
+                  {course.introVideoRef ? (
+                    <iframe
+                      src={
+                        course.introVideoProvider === "BUNNY"
+                          ? (course.introVideoRef.startsWith("http")
+                              ? course.introVideoRef
+                              : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
+                          : course.introVideoProvider === "YOUTUBE"
+                            ? (course.introVideoRef.startsWith("http")
+                                ? course.introVideoRef
+                                : `https://www.youtube.com/embed/${course.introVideoRef}`)
+                          : course.introVideoProvider === "VIMEO"
+                            ? (course.introVideoRef.startsWith("http")
+                                ? course.introVideoRef
+                                : `https://player.vimeo.com/video/${course.introVideoRef}`)
+                          : course.introVideoRef
+                      }
+                      className="w-full h-full"
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                      allowFullScreen
+                    />
+                  ) : course.thumbnailUrl ? (
+                    <>
+                      <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+                          <Play className="h-6 w-6 fill-primary text-primary ml-0.5" />
+                        </div>
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
                       <Play className="w-12 h-12 text-primary/30" />
                     </div>
                   )}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <div className="h-14 w-14 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                      <Play className="h-6 w-6 fill-primary text-primary ml-0.5" />
-                    </div>
-                  </div>
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="flex items-baseline justify-between">
