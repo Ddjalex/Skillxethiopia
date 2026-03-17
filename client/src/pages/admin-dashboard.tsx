@@ -377,6 +377,7 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: {
   setPreviewUrl: (url: string | null) => void;
 }) {
   const { toast } = useToast();
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const { data: options, isLoading } = useQuery<any[]>({ queryKey: ["/api/payment-options"] });
 
   const createOption = useMutation({
@@ -389,6 +390,7 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: {
       toast({ title: "Success", description: "Payment option added" });
       form.reset();
       setPreviewUrl(null);
+      setAddPaymentOpen(false);
     }
   });
 
@@ -423,7 +425,7 @@ function PaymentManagement({ fileInputRef, previewUrl, setPreviewUrl }: {
         title="Payment Options"
         subtitle="Configure the payment methods available to learners."
         action={
-          <Dialog>
+          <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Add Option</Button>
             </DialogTrigger>
@@ -879,6 +881,8 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
 
 function CourseManagement({ courses, categories }: { courses: any[]; categories: any[] }) {
   const { toast } = useToast();
+  const [addCourseOpen, setAddCourseOpen] = useState(false);
+
   const createCourse = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", api.admin.createCourse.path, data);
@@ -887,6 +891,8 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.public.courses.path] });
       toast({ title: "Success", description: "Course created successfully" });
+      form.reset();
+      setAddCourseOpen(false);
     }
   });
 
@@ -901,7 +907,7 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
         title="Courses"
         subtitle={`${courses.length} course${courses.length !== 1 ? "s" : ""} on the platform`}
         action={
-          <Dialog>
+          <Dialog open={addCourseOpen} onOpenChange={setAddCourseOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Add Course</Button>
             </DialogTrigger>
