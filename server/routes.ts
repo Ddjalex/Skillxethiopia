@@ -152,7 +152,7 @@ export async function registerRoutes(
         ...s,
         episodes: eps.map(e => ({
           id: e.id, seasonId: e.seasonId, title: e.title, episodeNumber: e.episodeNumber,
-          description: e.description, durationSec: e.durationSec, isPreview: false, price: e.price,
+          description: e.description, durationSec: e.durationSec, isPreview: e.isPreview, price: e.price,
           createdAt: e.createdAt
         }))
       };

@@ -1,7 +1,7 @@
 import { Navbar } from "@/components/layout-nav";
 import { useDashboardCourse, useBuyItem } from "@/hooks/use-courses";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlayCircle, Lock, ChevronLeft, CheckCircle, AlertCircle, BookOpen } from "lucide-react";
+import { Loader2, PlayCircle, Lock, ChevronLeft, CheckCircle, AlertCircle, BookOpen, Play } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
@@ -166,18 +166,23 @@ export default function DashboardCourse() {
                         <div
                           key={ep.id}
                           className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                            ep.isUnlocked ? "hover:bg-secondary/60" : "opacity-60"
+                            ep.isUnlocked || ep.isPreview ? "hover:bg-secondary/60" : "opacity-60"
                           }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
-                              ep.isUnlocked
+                              ep.isUnlocked || ep.isPreview
                                 ? "bg-primary/10 text-primary"
                                 : "bg-secondary text-muted-foreground"
                             }`}>
-                              {ep.isUnlocked ? <PlayCircle className="h-4 w-4" /> : ep.episodeNumber}
+                              {ep.isUnlocked || ep.isPreview ? <PlayCircle className="h-4 w-4" /> : ep.episodeNumber}
                             </div>
-                            <span className="text-sm font-medium truncate">{ep.title}</span>
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium truncate block">{ep.title}</span>
+                              {ep.isPreview && !ep.isUnlocked && (
+                                <span className="badge-info text-[10px]">Free Preview</span>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
@@ -185,6 +190,12 @@ export default function DashboardCourse() {
                               <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
                                 <Button size="sm" className="h-7 text-xs gap-1">
                                   <PlayCircle className="h-3 w-3" /> Watch
+                                </Button>
+                              </Link>
+                            ) : ep.isPreview ? (
+                              <Link href={`/video/${ep.id}`}>
+                                <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1">
+                                  <Play className="w-3 h-3 fill-current" /> Preview
                                 </Button>
                               </Link>
                             ) : ep.isPending ? (
