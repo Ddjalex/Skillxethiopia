@@ -679,6 +679,7 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
 }
 
 function CourseContentDialog({ courseId }: { courseId: number }) {
+  const { toast } = useToast();
   const { data: courseData, isLoading } = useQuery<any>({
     queryKey: [api.protected.dashboardCourse.path, { id: courseId }],
     queryFn: async () => {
@@ -687,6 +688,84 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
       return res.json();
     }
   });
+
+  const [inlineEdit, setInlineEdit] = useState<{ type: "season" | "episode"; id: number; value: string } | null>(null);
+
+  const quickUpdatePrice = useMutation({
+    mutationFn: async ({ type, id, price }: { type: "season" | "episode"; id: number; price: string }) => {
+      const path = type === "season"
+        ? buildUrl(api.admin.updateSeason.path, { id })
+        : buildUrl(api.admin.updateEpisode.path, { id });
+      const res = await apiRequest("PUT", path, { price });
+      if (!res.ok) throw new Error("Failed to update price");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: courseId }] });
+      setInlineEdit(null);
+      toast({ title: "Price updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update price", variant: "destructive" });
+    }
+  });
+
+  const savePrice = (type: "season" | "episode", id: number, price: string) => {
+    quickUpdatePrice.mutate({ type, id, price });
+  };
+
+  const InlinePrice = ({ type, id, price }: { type: "season" | "episode"; id: number; price: string }) => {
+    const isEditing = inlineEdit?.type === type && inlineEdit?.id === id;
+    const isFree = price === "0" || price === "0.00";
+
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <Input
+            className="h-7 w-24 text-xs px-2"
+            value={inlineEdit.value}
+            onChange={e => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+            onKeyDown={e => {
+              if (e.key === "Enter") savePrice(type, id, inlineEdit.value);
+              if (e.key === "Escape") setInlineEdit(null);
+            }}
+            autoFocus
+          />
+          <Button
+            variant="outline" size="sm"
+            className="h-7 text-xs px-2 text-green-600 border-green-200 hover:bg-green-50"
+            disabled={quickUpdatePrice.isPending}
+            onClick={() => savePrice(type, id, "0")}
+          >Free</Button>
+          <Button
+            variant="default" size="sm"
+            className="h-7 text-xs px-2"
+            disabled={quickUpdatePrice.isPending}
+            onClick={() => savePrice(type, id, inlineEdit.value)}
+          >Save</Button>
+          <Button
+            variant="ghost" size="icon"
+            className="h-7 w-7"
+            onClick={() => setInlineEdit(null)}
+          ><X className="h-3 w-3" /></Button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        className="flex items-center gap-1.5 group text-left"
+        onClick={() => setInlineEdit({ type, id, value: price })}
+        title="Click to edit price"
+      >
+        {isFree
+          ? <span className="badge-success text-xs font-semibold">FREE</span>
+          : <span className="text-sm text-muted-foreground">{price} ETB</span>
+        }
+        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+      </button>
+    );
+  };
 
   return (
     <Dialog>
@@ -698,7 +777,7 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Course Content</DialogTitle>
-          <DialogDescription>Manage seasons and episodes for this course.</DialogDescription>
+          <DialogDescription>Manage seasons and episodes. Click any price to edit it inline.</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
@@ -708,11 +787,14 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
             {courseData?.seasons?.map((season: any) => (
               <div key={season.id} className="card-base overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-secondary/40">
-                  <div>
-                    <p className="font-semibold text-sm">Season {season.seasonNumber}: {season.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {season.price} ETB{season.instructorName ? ` · ${season.instructorName}` : ""}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-semibold text-sm">Season {season.seasonNumber}: {season.title}</p>
+                      {season.instructorName && (
+                        <p className="text-xs text-muted-foreground">BY {season.instructorName}</p>
+                      )}
+                    </div>
+                    <InlinePrice type="season" id={season.id} price={season.price} />
                   </div>
                   <div className="flex gap-1">
                     <EditSeasonDialog season={season} courseId={courseId} />
@@ -740,7 +822,9 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                           {ep.title}
                           {ep.isPreview && <span className="badge-info ml-2">Preview</span>}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{ep.price} ETB</TableCell>
+                        <TableCell>
+                          <InlinePrice type="episode" id={ep.id} price={ep.price} />
+                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Dialog>
