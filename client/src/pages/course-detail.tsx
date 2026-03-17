@@ -79,6 +79,8 @@ export default function CourseDetailPage() {
 
   const totalEpisodes = enrichedSeasons.reduce((acc, s) => acc + s.episodes.length, 0);
 
+  const isFree = course?.priceStrategy === "FREE";
+
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) { window.location.href = "/auth"; return; }
     setPaymentState({ isOpen: true, itemType, itemId, amount });
@@ -183,18 +185,26 @@ export default function CourseDetailPage() {
                 <div className="p-5 space-y-4">
                   <div className="flex items-baseline justify-between">
                     <span className="text-xl font-bold">
-                      {course.priceStrategy === "FREE" ? "Free" : "Premium Content"}
+                      {isFree ? "Free" : "Premium Content"}
                     </span>
-                    {course.priceStrategy === "FREE" && (
+                    {isFree && (
                       <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold">FREE</Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground text-center border border-dashed border-border rounded-lg py-3 px-2">
-                    Purchase individual seasons or episodes below
-                  </p>
-                  <p className="text-xs text-center text-muted-foreground">
-                    30-Day Money-Back Guarantee
-                  </p>
+                  {isFree ? (
+                    <p className="text-xs text-center text-green-700 bg-green-50 border border-green-200 rounded-lg py-3 px-2 font-medium">
+                      All content is free — watch any episode below
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground text-center border border-dashed border-border rounded-lg py-3 px-2">
+                        Purchase individual seasons or episodes below
+                      </p>
+                      <p className="text-xs text-center text-muted-foreground">
+                        30-Day Money-Back Guarantee
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -241,7 +251,11 @@ export default function CourseDetailPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
-                      {season.isUnlocked ? (
+                      {isFree ? (
+                        <span className="badge-success">
+                          <CheckCircle className="w-3 h-3" /> Free
+                        </span>
+                      ) : season.isUnlocked ? (
                         <span className="badge-success">
                           <CheckCircle className="w-3 h-3" /> Unlocked
                         </span>
@@ -293,7 +307,7 @@ export default function CourseDetailPage() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          {ep.isUnlocked ? (
+                          {isFree || ep.isUnlocked ? (
                             <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
                               <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1">
                                 <Play className="w-3 h-3 fill-current" />

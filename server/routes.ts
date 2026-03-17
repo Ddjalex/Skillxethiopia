@@ -172,10 +172,21 @@ export async function registerRoutes(
     const course = await storage.getCourse(Number(req.params.id));
     if (!course) return res.status(404).json({ message: "Not found" });
     
+    const isFree = course.priceStrategy === "FREE";
     const seasons = await storage.getSeasonsByCourse(course.id);
     const seasonsWithEpisodes = await Promise.all(seasons.map(async s => {
       const eps = await storage.getEpisodesBySeason(s.id);
       
+      // Free courses: all content is unlocked
+      if (isFree) {
+        return {
+          ...s,
+          isUnlocked: true,
+          isPending: false,
+          episodes: eps.map(e => ({ ...e, isUnlocked: true, isPending: false }))
+        };
+      }
+
       // Check if season is unlocked
       const seasonGrant = await db.select().from(accessGrants).where(
         and(
@@ -276,6 +287,17 @@ export async function registerRoutes(
     // Admin always has access
     if ((req.user as any).role === "ADMIN") {
       hasAccess = true;
+    }
+
+    if (!hasAccess) {
+      // Check if the course is FREE — free courses are always accessible
+      const season = await db.select().from(seasons).where(eq(seasons.id, episode.seasonId)).limit(1);
+      if (season.length > 0) {
+        const course = await storage.getCourse(season[0].courseId);
+        if (course?.priceStrategy === "FREE") {
+          hasAccess = true;
+        }
+      }
     }
 
     if (!hasAccess) {
