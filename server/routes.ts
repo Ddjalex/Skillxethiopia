@@ -408,6 +408,82 @@ export async function registerRoutes(
     res.status(204).end();
   });
 
+  // --- Analytics ---
+  app.get("/api/admin/analytics", requireAdmin, async (req, res) => {
+    // Fetch all base data
+    const allCourses = await storage.getCourses();
+    const allUsers = await storage.getAllUsers();
+    const allSeasons = await db.select().from(seasons);
+    const allEpisodes = await db.select().from(episodes);
+    const allPurchases = await db.select({ purchase: purchases, user: users })
+      .from(purchases)
+      .leftJoin(users, eq(purchases.userId, users.id));
+
+    // Build lookup maps
+    const seasonToCourse: Record<number, number> = {};
+    allSeasons.forEach(s => { seasonToCourse[s.id] = s.courseId; });
+
+    const episodeToCourse: Record<number, number> = {};
+    allEpisodes.forEach(e => {
+      const cId = seasonToCourse[e.seasonId];
+      if (cId) episodeToCourse[e.id] = cId;
+    });
+
+    const paidPurchases = allPurchases.filter(p => p.purchase.status === "PAID");
+
+    // Course stats: per course, count paid purchases and unique buyers
+    const courseStatMap: Record<number, { purchaseCount: number; buyers: Set<number>; revenue: number }> = {};
+    allCourses.forEach(c => { courseStatMap[c.id] = { purchaseCount: 0, buyers: new Set(), revenue: 0 }; });
+
+    paidPurchases.forEach(({ purchase }) => {
+      const courseId = purchase.itemType === "SEASON"
+        ? seasonToCourse[purchase.itemId]
+        : episodeToCourse[purchase.itemId];
+      if (courseId && courseStatMap[courseId]) {
+        courseStatMap[courseId].purchaseCount++;
+        courseStatMap[courseId].buyers.add(purchase.userId);
+        courseStatMap[courseId].revenue += parseFloat(purchase.amount) || 0;
+      }
+    });
+
+    const courseStats = allCourses.map(c => ({
+      courseId: c.id,
+      courseTitle: c.title,
+      instructorName: c.instructorName,
+      priceStrategy: c.priceStrategy,
+      totalPurchases: courseStatMap[c.id]?.purchaseCount || 0,
+      uniqueBuyers: courseStatMap[c.id]?.buyers.size || 0,
+      revenue: courseStatMap[c.id]?.revenue || 0,
+    }));
+
+    // User stats: per user, count paid purchases and distinct courses bought
+    const userStatMap: Record<number, { purchaseCount: number; courses: Set<number>; totalSpent: number }> = {};
+    allUsers.forEach(u => { userStatMap[u.id] = { purchaseCount: 0, courses: new Set(), totalSpent: 0 }; });
+
+    paidPurchases.forEach(({ purchase }) => {
+      if (!userStatMap[purchase.userId]) return;
+      const courseId = purchase.itemType === "SEASON"
+        ? seasonToCourse[purchase.itemId]
+        : episodeToCourse[purchase.itemId];
+      userStatMap[purchase.userId].purchaseCount++;
+      if (courseId) userStatMap[purchase.userId].courses.add(courseId);
+      userStatMap[purchase.userId].totalSpent += parseFloat(purchase.amount) || 0;
+    });
+
+    const userStats = allUsers
+      .filter(u => u.role !== "ADMIN")
+      .map(u => ({
+        userId: u.id,
+        userName: u.name,
+        email: u.email,
+        totalPurchases: userStatMap[u.id]?.purchaseCount || 0,
+        coursesCount: userStatMap[u.id]?.courses.size || 0,
+        totalSpent: userStatMap[u.id]?.totalSpent || 0,
+      }));
+
+    res.json({ courseStats, userStats });
+  });
+
   app.get("/api/admin/purchases", requireAdmin, async (req, res) => {
     const allPurchases = await db.select({
       purchase: purchases,

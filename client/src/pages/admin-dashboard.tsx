@@ -7,7 +7,8 @@ import {
   Loader2, Users, BookOpen, Layers, Plus, Video,
   Image as ImageIcon, Settings, Pencil, Trash2,
   CreditCard, Upload, LayoutDashboard, FileText,
-  ChevronRight, ShieldCheck, TrendingUp, Menu, X
+  ChevronRight, ShieldCheck, TrendingUp, Menu, X,
+  Download, BarChart2, ShoppingCart
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -32,13 +33,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
-type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments";
+type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments" | "analytics";
 
 const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "categories", label: "Categories", icon: Layers },
   { id: "purchases", label: "Purchases", icon: FileText },
+  { id: "analytics", label: "Analytics", icon: BarChart2 },
   { id: "users", label: "Users", icon: Users },
   { id: "payments", label: "Payment Options", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Settings },
@@ -202,6 +204,7 @@ export default function AdminDashboard() {
           {activeTab === "courses" && <CourseManagement courses={courses || []} categories={categories || []} />}
           {activeTab === "categories" && <CategoryManagement categories={categories || []} />}
           {activeTab === "purchases" && <PurchaseManagement />}
+          {activeTab === "analytics" && <AnalyticsManagement />}
           {activeTab === "users" && <UserManagement users={users || []} />}
           {activeTab === "payments" && (
             <PaymentManagement
@@ -1220,9 +1223,180 @@ function CategoryManagement({ categories }: { categories: any[] }) {
   );
 }
 
-function UserManagement({ users }: { users: any[] }) {
+function AnalyticsManagement() {
+  const { data: analytics, isLoading } = useQuery<any>({ queryKey: ["/api/admin/analytics"] });
+
+  const exportToExcel = async () => {
+    const xlsx = await import("xlsx");
+    const wb = xlsx.utils.book_new();
+
+    const courseRows = (analytics?.courseStats || []).map((c: any) => ({
+      "Course Title": c.courseTitle,
+      "Instructor": c.instructorName,
+      "Type": c.priceStrategy,
+      "Total Purchases": c.totalPurchases,
+      "Unique Buyers": c.uniqueBuyers,
+      "Revenue (ETB)": c.revenue,
+    }));
+    const ws1 = xlsx.utils.json_to_sheet(courseRows);
+    xlsx.utils.book_append_sheet(wb, ws1, "Course Sales");
+
+    const userRows = (analytics?.userStats || []).map((u: any) => ({
+      "User Name": u.userName,
+      "Email": u.email,
+      "Total Purchases": u.totalPurchases,
+      "Courses Bought": u.coursesCount,
+      "Total Spent (ETB)": u.totalSpent,
+    }));
+    const ws2 = xlsx.utils.json_to_sheet(userRows);
+    xlsx.utils.book_append_sheet(wb, ws2, "User Purchases");
+
+    xlsx.writeFile(wb, "skillxethiopia-analytics.xlsx");
+  };
+
+  const totalRevenue = analytics?.courseStats?.reduce((s: number, c: any) => s + c.revenue, 0) || 0;
+  const totalPurchases = analytics?.courseStats?.reduce((s: number, c: any) => s + c.totalPurchases, 0) || 0;
+
   return (
-    <div className="max-w-3xl space-y-6">
+    <div className="max-w-5xl space-y-8">
+      <PageHeader
+        title="Analytics"
+        subtitle="Purchase performance across courses and users."
+        action={
+          <Button size="sm" className="gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={exportToExcel} disabled={isLoading}>
+            <Download className="h-4 w-4" /> Export to Excel
+          </Button>
+        }
+      />
+
+      {isLoading ? (
+        <div className="flex justify-center p-16"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
+      ) : (
+        <>
+          {/* Summary cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="card-base p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <ShoppingCart className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{totalPurchases}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Total Paid Purchases</p>
+            </div>
+            <div className="card-base p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="h-10 w-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{totalRevenue.toLocaleString()} ETB</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Total Revenue</p>
+            </div>
+            <div className="card-base p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center">
+                  <Users className="h-5 w-5" />
+                </div>
+              </div>
+              <p className="text-2xl font-bold">{analytics?.userStats?.filter((u: any) => u.totalPurchases > 0).length || 0}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Paying Users</p>
+            </div>
+          </div>
+
+          {/* Course Purchase Stats */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">Purchases by Course</h2>
+            <div className="card-base overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary/60">
+                    <TableHead>Course</TableHead>
+                    <TableHead>Instructor</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Purchases</TableHead>
+                    <TableHead className="text-right">Unique Buyers</TableHead>
+                    <TableHead className="text-right">Revenue (ETB)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {analytics?.courseStats?.length === 0 && (
+                    <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-12">No course data yet.</TableCell></TableRow>
+                  )}
+                  {analytics?.courseStats?.map((c: any) => (
+                    <TableRow key={c.courseId} className="hover:bg-secondary/30">
+                      <TableCell className="font-medium text-sm">{c.courseTitle}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{c.instructorName}</TableCell>
+                      <TableCell>
+                        {c.priceStrategy === "FREE"
+                          ? <span className="badge-success">Free</span>
+                          : <span className="badge-info">Paid</span>}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-sm">{c.totalPurchases}</TableCell>
+                      <TableCell className="text-right text-sm">{c.uniqueBuyers}</TableCell>
+                      <TableCell className="text-right font-semibold text-sm text-green-700">{c.revenue.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* User Purchase Stats */}
+          <div className="space-y-3">
+            <h2 className="text-sm font-semibold text-foreground">Purchases by User</h2>
+            <div className="card-base overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-secondary/60">
+                    <TableHead>User</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead className="text-right">Courses Bought</TableHead>
+                    <TableHead className="text-right">Total Purchases</TableHead>
+                    <TableHead className="text-right">Total Spent (ETB)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {analytics?.userStats?.length === 0 && (
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">No user data yet.</TableCell></TableRow>
+                  )}
+                  {analytics?.userStats?.map((u: any) => (
+                    <TableRow key={u.userId} className="hover:bg-secondary/30">
+                      <TableCell>
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-primary">{u.userName?.charAt(0)?.toUpperCase()}</span>
+                          </div>
+                          <span className="font-medium text-sm">{u.userName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{u.email}</TableCell>
+                      <TableCell className="text-right">
+                        <span className={cn("font-semibold text-sm", u.coursesCount > 0 ? "text-blue-600" : "text-muted-foreground")}>
+                          {u.coursesCount}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold text-sm">{u.totalPurchases}</TableCell>
+                      <TableCell className="text-right font-semibold text-sm text-green-700">{u.totalSpent.toLocaleString()}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function UserManagement({ users }: { users: any[] }) {
+  const { data: analytics } = useQuery<any>({ queryKey: ["/api/admin/analytics"] });
+  const userStatsMap: Record<number, any> = {};
+  (analytics?.userStats || []).forEach((u: any) => { userStatsMap[u.userId] = u; });
+
+  return (
+    <div className="max-w-4xl space-y-6">
       <PageHeader
         title="Users"
         subtitle={`${users.length} registered member${users.length !== 1 ? "s" : ""}`}
@@ -1234,34 +1408,53 @@ function UserManagement({ users }: { users: any[] }) {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead className="text-right">Courses Bought</TableHead>
+              <TableHead className="text-right">Total Purchases</TableHead>
+              <TableHead className="text-right">Total Spent</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {users.length === 0 && (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
                   No users yet.
                 </TableCell>
               </TableRow>
             )}
-            {users.map((user) => (
-              <TableRow key={user.id} className="hover:bg-secondary/30">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-bold text-primary">{user.name?.charAt(0)?.toUpperCase()}</span>
+            {users.map((user) => {
+              const stats = userStatsMap[user.id];
+              return (
+                <TableRow key={user.id} className="hover:bg-secondary/30">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-xs font-bold text-primary">{user.name?.charAt(0)?.toUpperCase()}</span>
+                      </div>
+                      <span className="font-medium text-sm">{user.name}</span>
                     </div>
-                    <span className="font-medium text-sm">{user.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
-                <TableCell>
-                  {user.role === "ADMIN"
-                    ? <span className="badge-info">Admin</span>
-                    : <span className="badge-neutral">User</span>}
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                  <TableCell>
+                    {user.role === "ADMIN"
+                      ? <span className="badge-info">Admin</span>
+                      : <span className="badge-neutral">User</span>}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {user.role !== "ADMIN" && (
+                      <span className={cn("font-semibold text-sm", stats?.coursesCount > 0 ? "text-blue-600" : "text-muted-foreground")}>
+                        {stats?.coursesCount ?? 0}
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-semibold text-sm">
+                    {user.role !== "ADMIN" ? (stats?.totalPurchases ?? 0) : "—"}
+                  </TableCell>
+                  <TableCell className="text-right text-sm font-semibold text-green-700">
+                    {user.role !== "ADMIN" ? `${(stats?.totalSpent ?? 0).toLocaleString()} ETB` : "—"}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
