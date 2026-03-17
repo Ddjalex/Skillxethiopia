@@ -567,15 +567,9 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
             <Label>Instructor Name <span className="text-muted-foreground text-xs font-normal">(optional — overrides course instructor)</span></Label>
             <Input {...form.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-10" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Season Number</Label>
-              <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} className="h-10" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Price (ETB)</Label>
-              <Input {...form.register("price")} className="h-10" />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Season Number</Label>
+            <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} className="h-10" />
           </div>
           <Button type="submit" className="w-full" disabled={updateSeason.isPending}>
             {updateSeason.isPending ? "Saving..." : "Save Changes"}
@@ -631,10 +625,6 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
           <div className="space-y-1.5">
             <Label>Episode Number</Label>
             <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Price (ETB)</Label>
-            <Input {...form.register("price")} className="h-10" />
           </div>
           <div className="space-y-1.5">
             <Label>Video Provider</Label>
@@ -1239,15 +1229,9 @@ function AddSeasonDialog({ courseId }: { courseId: number }) {
             <Label>Instructor Name <span className="text-muted-foreground text-xs font-normal">(optional — overrides course instructor)</span></Label>
             <Input {...form.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-10" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label>Season Number</Label>
-              <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} className="h-10" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Price (ETB)</Label>
-              <Input {...form.register("price")} className="h-10" />
-            </div>
+          <div className="space-y-1.5">
+            <Label>Season Number</Label>
+            <Input type="number" {...form.register("seasonNumber", { valueAsNumber: true })} className="h-10" />
           </div>
           <Button type="submit" className="w-full" disabled={createSeason.isPending}>
             {createSeason.isPending ? "Adding..." : "Add Season"}
@@ -1686,10 +1670,6 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
             <div className="space-y-1.5">
               <Label>Episode Number</Label>
               <Input type="number" {...form.register("episodeNumber", { valueAsNumber: true })} className="h-10" />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Price (ETB)</Label>
-              <Input {...form.register("price")} placeholder="0" className="h-10" />
             </div>
             <div className="space-y-1.5">
               <Label>Video Provider</Label>
