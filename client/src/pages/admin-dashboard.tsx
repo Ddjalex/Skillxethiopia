@@ -9,12 +9,13 @@ import {
   CreditCard, Upload, LayoutDashboard, FileText,
   ChevronRight, ShieldCheck, TrendingUp, Menu, X,
   Download, BarChart2, ShoppingCart, Megaphone, Tag,
-  Flame, Sparkles, Send, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight
+  Flame, Sparkles, Send, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
+  Eye, Play, Wifi, Clock, Film, AlertTriangle
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
 import { apiRequest } from "@/lib/queryClient";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +34,34 @@ import { insertCourseSchema, insertCategorySchema, insertEpisodeSchema, insertSe
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+
+const BUNNY_LIBRARY_ID = "617163";
+const BUNNY_PREFIX = BUNNY_LIBRARY_ID + "/";
+
+function BunnyVideoRefInput({
+  value,
+  onChange,
+  placeholder = "paste video UUID here",
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const displayValue = value.startsWith(BUNNY_PREFIX) ? value.slice(BUNNY_PREFIX.length) : value;
+  return (
+    <div className="flex items-center rounded-md border border-input bg-background overflow-hidden h-10 focus-within:ring-1 focus-within:ring-ring">
+      <span className="bg-secondary text-xs font-mono text-foreground/60 px-2.5 h-full flex items-center border-r border-input flex-shrink-0 select-none whitespace-nowrap">
+        {BUNNY_PREFIX}
+      </span>
+      <input
+        className="flex-1 h-full px-3 text-sm bg-transparent outline-none font-mono min-w-0"
+        placeholder={placeholder}
+        value={displayValue}
+        onChange={(e) => onChange(e.target.value ? BUNNY_PREFIX + e.target.value.trim() : "")}
+      />
+    </div>
+  );
+}
 
 type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments" | "analytics" | "broadcasts";
 
@@ -645,11 +674,13 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
           </div>
           <div className="space-y-1.5">
             <Label>Video Ref</Label>
-            <Input {...form.register("videoRef")} className="h-10" />
-            {editVideoProvider === "BUNNY" && (
-              <p className="text-xs text-muted-foreground">
-                Format: <span className="font-mono text-primary">libraryId/videoId</span> — e.g. <span className="font-mono">617163/3793f824-8eea-...</span>. Find your Library ID at dash.bunny.net/stream.
-              </p>
+            {editVideoProvider === "BUNNY" ? (
+              <BunnyVideoRefInput
+                value={form.watch("videoRef") || ""}
+                onChange={(v) => form.setValue("videoRef", v)}
+              />
+            ) : (
+              <Input {...form.register("videoRef")} className="h-10" />
             )}
           </div>
           <div className="space-y-1.5">
@@ -894,6 +925,7 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
     defaultValues: { title: "", slug: "", description: "", instructorName: "", categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
   });
   const watchedPriceStrategy = form.watch("priceStrategy");
+  const watchedIntroVideoProvider = form.watch("introVideoProvider");
 
   return (
     <div className="max-w-5xl space-y-6">
@@ -966,7 +998,14 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                 </div>
                 <div className="space-y-1.5">
                   <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                  <Input {...form.register("introVideoRef")} placeholder="libraryId/videoId for Bunny" className="h-10" />
+                  {watchedIntroVideoProvider === "BUNNY" ? (
+                    <BunnyVideoRefInput
+                      value={form.watch("introVideoRef") || ""}
+                      onChange={(v) => form.setValue("introVideoRef", v)}
+                    />
+                  ) : (
+                    <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+                  )}
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label>Description</Label>
@@ -1126,6 +1165,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
     }
   });
   const editWatchedPriceStrategy = form.watch("priceStrategy");
+  const editIntroVideoProvider = form.watch("introVideoProvider");
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -1190,7 +1230,14 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
           </div>
           <div className="space-y-1.5 col-span-2">
             <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
-            <Input {...form.register("introVideoRef")} placeholder="e.g. 617163/3793f824-8eea-4af6-a7d1-7f080dee5729" className="h-10" />
+            {editIntroVideoProvider === "BUNNY" ? (
+              <BunnyVideoRefInput
+                value={form.watch("introVideoRef") || ""}
+                onChange={(v) => form.setValue("introVideoRef", v)}
+              />
+            ) : (
+              <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+            )}
           </div>
           <div className="space-y-1.5 col-span-2">
             <Label>Description</Label>
@@ -1349,8 +1396,25 @@ function CategoryManagement({ categories }: { categories: any[] }) {
   );
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+}
+
+function formatNumber(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toString();
+}
+
 function AnalyticsManagement() {
   const { data: analytics, isLoading } = useQuery<any>({ queryKey: ["/api/admin/analytics"] });
+  const { data: bunnyData, isLoading: bunnyLoading } = useQuery<any>({ queryKey: ["/api/admin/bunny-analytics"] });
+
+  const bunnyStats = bunnyData?.stats ?? null;
+  const bunnyError = bunnyData?.error ?? null;
 
   const exportToExcel = async () => {
     const xlsx = await import("xlsx");
@@ -1428,6 +1492,77 @@ function AnalyticsManagement() {
               <p className="text-2xl font-bold">{analytics?.userStats?.filter((u: any) => u.totalPurchases > 0).length || 0}</p>
               <p className="text-sm text-muted-foreground mt-0.5">Paying Users</p>
             </div>
+          </div>
+
+          {/* Bunny.net Video Analytics */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Film className="h-4 w-4 text-orange-500" />
+              <h2 className="text-sm font-semibold text-foreground">Bunny.net Video Analytics</h2>
+              <span className="text-xs text-muted-foreground font-normal">(Library {BUNNY_LIBRARY_ID})</span>
+            </div>
+            {bunnyLoading ? (
+              <div className="card-base p-6 flex items-center justify-center gap-2 text-muted-foreground text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading Bunny.net stats...
+              </div>
+            ) : bunnyError ? (
+              <div className="card-base p-4 flex items-start gap-3 text-sm">
+                <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-amber-700">{bunnyError}</p>
+                  {bunnyError.includes("BUNNY_API_KEY") && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Add <code className="bg-secondary px-1 rounded">BUNNY_API_KEY</code> to your environment secrets to see real video stats from your Bunny.net stream library.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : bunnyStats ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center mb-3">
+                    <Play className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatNumber(bunnyStats.numberOfPlays)}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Total Video Plays</p>
+                </div>
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3">
+                    <Eye className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatNumber(bunnyStats.numberOfImpressions)}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Video Impressions</p>
+                </div>
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3">
+                    <Film className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{bunnyStats.totalVideoCount.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Uploaded Videos</p>
+                </div>
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-orange-50 text-orange-500 flex items-center justify-center mb-3">
+                    <Wifi className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{formatBytes(bunnyStats.bandwidthBytes)}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">CDN Bandwidth Used</p>
+                </div>
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center mb-3">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{(bunnyStats.finishRate * 100).toFixed(1)}%</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Average Finish Rate</p>
+                </div>
+                <div className="card-base p-5">
+                  <div className="h-10 w-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mb-3">
+                    <BarChart2 className="h-5 w-5" />
+                  </div>
+                  <p className="text-2xl font-bold">{(bunnyStats.engagementScore * 100).toFixed(1)}%</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Engagement Score</p>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Course Purchase Stats */}
@@ -1705,16 +1840,18 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
             </div>
             <div className="space-y-1.5">
               <Label>Video Ref (ID or URL)</Label>
-              <Input
-                {...form.register("videoRef")}
-                placeholder={videoProvider === "BUNNY" ? "libraryId/videoId or full URL" : videoProvider === "VIMEO" ? "Vimeo ID or URL" : "ID or URL"}
-                className="h-10"
-                onBlur={(e) => detectDuration(e.target.value)}
-              />
-              {videoProvider === "BUNNY" && (
-                <p className="text-xs text-muted-foreground">
-                  Format: <span className="font-mono text-primary">libraryId/videoId</span> — e.g. <span className="font-mono">617163/3793f824-8eea-...</span>. Find your Library ID at dash.bunny.net/stream.
-                </p>
+              {videoProvider === "BUNNY" ? (
+                <BunnyVideoRefInput
+                  value={form.watch("videoRef") || ""}
+                  onChange={(v) => form.setValue("videoRef", v)}
+                />
+              ) : (
+                <Input
+                  {...form.register("videoRef")}
+                  placeholder={videoProvider === "VIMEO" ? "Vimeo ID or URL" : "ID or URL"}
+                  className="h-10"
+                  onBlur={(e) => detectDuration(e.target.value)}
+                />
               )}
             </div>
             <div className="space-y-1.5">

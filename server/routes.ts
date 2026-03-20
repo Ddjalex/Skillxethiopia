@@ -510,6 +510,60 @@ export async function registerRoutes(
     res.json({ courseStats, userStats });
   });
 
+  // --- Bunny.net Stream Analytics ---
+  app.get("/api/admin/bunny-analytics", requireAdmin, async (req, res) => {
+    const apiKey = process.env.BUNNY_API_KEY;
+    const libraryId = "617163";
+
+    if (!apiKey) {
+      return res.json({ error: "BUNNY_API_KEY not configured", stats: null });
+    }
+
+    try {
+      const [statsRes, videosRes] = await Promise.all([
+        fetch(`https://video.bunnycdn.com/library/${libraryId}/statistics`, {
+          headers: { AccessKey: apiKey },
+        }),
+        fetch(`https://video.bunnycdn.com/library/${libraryId}/videos?page=1&itemsPerPage=1`, {
+          headers: { AccessKey: apiKey },
+        }),
+      ]);
+
+      if (!statsRes.ok) {
+        const errText = await statsRes.text();
+        return res.json({ error: `Bunny API error (${statsRes.status}): ${errText}`, stats: null });
+      }
+
+      const statsData = await statsRes.json();
+      let totalVideoCount = 0;
+      if (videosRes.ok) {
+        const vd = await videosRes.json();
+        totalVideoCount = vd.totalItems || 0;
+      }
+
+      const pullZoneBandwidth = Object.values(statsData.PullZoneStats || {}).reduce(
+        (sum: number, zone: any) => sum + (zone.CdnResponseSize || 0),
+        0
+      ) as number;
+
+      return res.json({
+        error: null,
+        stats: {
+          numberOfPlays: statsData.NumberOfPlays || 0,
+          numberOfImpressions: statsData.NumberOfImpressions || 0,
+          finishRate: statsData.FinishRate || 0,
+          engagementScore: statsData.EngagementScore || 0,
+          bandwidthBytes: pullZoneBandwidth,
+          totalVideoCount,
+          viewsChart: statsData.ViewsChart || {},
+          watchTimeChart: statsData.WatchTimeChart || {},
+        },
+      });
+    } catch (e: any) {
+      return res.json({ error: e.message, stats: null });
+    }
+  });
+
   app.get("/api/admin/purchases", requireAdmin, async (req, res) => {
     const allPurchases = await db.select({
       purchase: purchases,
