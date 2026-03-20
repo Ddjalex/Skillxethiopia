@@ -1923,8 +1923,10 @@ function AdminSettings() {
     BUNNY_API_KEY: "",
     TELEGRAM_BOT_TOKEN: "",
     TELEGRAM_CHAT_ID: "",
+    TELEGRAM_CHANNEL_ID: "",
   });
   const [detectedChats, setDetectedChats] = useState<{ id: string; type: string; title?: string; first_name?: string; username?: string }[]>([]);
+  const [detectedChannelChats, setDetectedChannelChats] = useState<{ id: string; type: string; title?: string; first_name?: string; username?: string }[]>([]);
 
   const { isLoading: tokensLoading, data: savedSettings } = useQuery<Record<string, string>>({
     queryKey: ["/api/admin/settings"],
@@ -1936,6 +1938,7 @@ function AdminSettings() {
         BUNNY_API_KEY: savedSettings.BUNNY_API_KEY ?? "",
         TELEGRAM_BOT_TOKEN: savedSettings.TELEGRAM_BOT_TOKEN ?? "",
         TELEGRAM_CHAT_ID: savedSettings.TELEGRAM_CHAT_ID ?? "",
+        TELEGRAM_CHANNEL_ID: savedSettings.TELEGRAM_CHANNEL_ID ?? "",
       });
     }
   }, [savedSettings]);
@@ -1968,6 +1971,26 @@ function AdminSettings() {
       setDetectedChats(data.chats.map(c => ({ ...c, id: String(c.id) })));
       if (data.chats.length === 0) {
         toast({ title: "No chats found", description: "Make sure you added the bot as an admin to your channel, then try again.", variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Detection failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const detectChannelChats = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/telegram/detect-chats", { credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? "Failed to detect chats");
+      }
+      return res.json() as Promise<{ chats: any[] }>;
+    },
+    onSuccess: (data) => {
+      setDetectedChannelChats(data.chats.map(c => ({ ...c, id: String(c.id) })));
+      if (data.chats.length === 0) {
+        toast({ title: "No chats found", description: "Make sure you added the bot as an admin to your channel first.", variant: "destructive" });
       }
     },
     onError: (err: any) => {
@@ -2061,6 +2084,54 @@ function AdminSettings() {
                       }}
                       className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-background border border-border hover:bg-secondary text-sm transition-colors text-left"
                       data-testid={`select-chat-${chat.id}`}
+                    >
+                      <span className="font-medium truncate">{chat.title || chat.first_name || chat.username || "Unknown"}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground capitalize">{chat.type}</span>
+                        <code className="text-xs font-mono text-muted-foreground">{chat.id}</code>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <TokenInput
+                label="TELEGRAM_CHANNEL_ID"
+                description="The Telegram channel ID where broadcast notifications will be sent. The bot must be an admin of the channel."
+                value={tokens.TELEGRAM_CHANNEL_ID}
+                onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_CHANNEL_ID: v }))}
+                placeholder="-100123456789"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs gap-2"
+                onClick={() => detectChannelChats.mutate()}
+                disabled={detectChannelChats.isPending || !tokens.TELEGRAM_BOT_TOKEN}
+                data-testid="button-detect-channel-id"
+              >
+                {detectChannelChats.isPending ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Detecting chats...</>
+                ) : (
+                  <><Send className="h-3.5 w-3.5" /> Auto-detect broadcast channel</>
+                )}
+              </Button>
+              {detectedChannelChats.length > 0 && (
+                <div className="rounded-md border border-border bg-secondary/40 p-2 space-y-1.5">
+                  <p className="text-xs text-muted-foreground font-medium px-1">Select your broadcast channel:</p>
+                  {detectedChannelChats.map(chat => (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => {
+                        setTokens(t => ({ ...t, TELEGRAM_CHANNEL_ID: chat.id }));
+                        setDetectedChannelChats([]);
+                        toast({ title: "Channel selected", description: `Broadcast channel set to ${chat.id}` });
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-background border border-border hover:bg-secondary text-sm transition-colors text-left"
+                      data-testid={`select-channel-${chat.id}`}
                     >
                       <span className="font-medium truncate">{chat.title || chat.first_name || chat.username || "Unknown"}</span>
                       <div className="flex items-center gap-2 flex-shrink-0">
@@ -2396,7 +2467,7 @@ function BroadcastsManagement() {
           <p className="font-semibold mb-0.5">Telegram Integration</p>
           <p className="text-muted-foreground text-xs leading-relaxed">
             When a broadcast is activated, a notification is sent to your Telegram channel automatically.
-            Set <code className="bg-secondary px-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="bg-secondary px-1 rounded">TELEGRAM_CHAT_ID</code> in your environment secrets to enable this.
+            Set <code className="bg-secondary px-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="bg-secondary px-1 rounded">TELEGRAM_CHANNEL_ID</code> in your Settings to enable this. The bot must be added as an admin of the channel.
           </p>
         </div>
       </div>

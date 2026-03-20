@@ -45,6 +45,17 @@ async function sendTelegramNotification(message: string) {
   }
 }
 
+async function sendBroadcastToChannel(message: string) {
+  const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
+  const channelId = await storage.getSetting("TELEGRAM_CHANNEL_ID") || process.env.TELEGRAM_CHANNEL_ID;
+  if (!token || !channelId) return;
+  try {
+    await callTelegramSendMessage(token, channelId, message);
+  } catch (err) {
+    console.error("Telegram channel broadcast failed:", err);
+  }
+}
+
 declare global {
   namespace Express {
     interface User extends UserSchema {}
@@ -665,7 +676,7 @@ export async function registerRoutes(
         if (created.discountPercent) tgMsg += `\n\n💰 <b>${created.discountPercent}% OFF</b>`;
         if (created.discountCode) tgMsg += ` | Code: <code>${created.discountCode}</code>`;
         if (created.ctaText && created.ctaUrl) tgMsg += `\n\n🔗 ${created.ctaText}: ${created.ctaUrl}`;
-        await sendTelegramNotification(tgMsg);
+        await sendBroadcastToChannel(tgMsg);
       }
       res.status(201).json(created);
     } catch (err) {
@@ -687,7 +698,7 @@ export async function registerRoutes(
         if (bc.discountPercent) tgMsg += `\n\n💰 <b>${bc.discountPercent}% OFF</b>`;
         if (bc.discountCode) tgMsg += ` | Code: <code>${bc.discountCode}</code>`;
         if (bc.ctaText && bc.ctaUrl) tgMsg += `\n\n🔗 ${bc.ctaText}: ${bc.ctaUrl}`;
-        await sendTelegramNotification(tgMsg);
+        await sendBroadcastToChannel(tgMsg);
         return res.json(bc);
       }
       const updated = await storage.updateBroadcast(id, body);
@@ -717,7 +728,7 @@ export async function registerRoutes(
   });
 
   // --- App Settings (API Tokens) ---
-  const ALLOWED_SETTING_KEYS = ["BUNNY_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"];
+  const ALLOWED_SETTING_KEYS = ["BUNNY_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_CHANNEL_ID"];
 
   app.get("/api/admin/settings", requireAdmin, async (req, res) => {
     const all = await storage.getAllSettings();
