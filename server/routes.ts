@@ -18,8 +18,8 @@ import session from "express-session";
 import { hash, compare } from "bcrypt";
 
 async function getTelegramCredentials() {
-  const token = process.env.TELEGRAM_BOT_TOKEN || await storage.getSetting("TELEGRAM_BOT_TOKEN");
-  const chatId = process.env.TELEGRAM_CHAT_ID || await storage.getSetting("TELEGRAM_CHAT_ID");
+  const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = await storage.getSetting("TELEGRAM_CHAT_ID") || process.env.TELEGRAM_CHAT_ID;
   return { token, chatId };
 }
 

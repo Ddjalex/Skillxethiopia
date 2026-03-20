@@ -42,7 +42,7 @@ export function BroadcastBanner() {
     staleTime: 60_000,
   });
 
-  const active = broadcasts?.filter(b => b.isActive) ?? [];
+  const active = Array.isArray(broadcasts) ? broadcasts.filter(b => b.isActive) : [];
 
   const goTo = useCallback((index: number, dir: number) => {
     setDirection(dir);
@@ -61,7 +61,7 @@ export function BroadcastBanner() {
 
   useEffect(() => {
     if (active.length <= 1) return;
-    const timer = setInterval(goNext, 5000);
+    const timer = setInterval(goNext, 10000);
     return () => clearInterval(timer);
   }, [active.length, goNext]);
 
