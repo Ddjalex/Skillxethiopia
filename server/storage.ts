@@ -1,6 +1,6 @@
 import { db } from "./db";
 import {
-  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts,
+  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts, appSettings,
   type User, type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
@@ -75,6 +75,11 @@ export interface IStorage {
   updateBroadcast(id: number, broadcast: Partial<InsertBroadcast>): Promise<Broadcast>;
   deleteBroadcast(id: number): Promise<void>;
   deactivateAllBroadcasts(): Promise<void>;
+
+  // App Settings
+  getSetting(key: string): Promise<string | undefined>;
+  setSetting(key: string, value: string): Promise<void>;
+  getAllSettings(): Promise<Record<string, string>>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -264,6 +269,20 @@ export class DatabaseStorage implements IStorage {
   }
   async deactivateAllBroadcasts(): Promise<void> {
     await db.update(broadcasts).set({ isActive: false });
+  }
+
+  // App Settings
+  async getSetting(key: string): Promise<string | undefined> {
+    const [row] = await db.select().from(appSettings).where(eq(appSettings.key, key));
+    return row?.value;
+  }
+  async setSetting(key: string, value: string): Promise<void> {
+    await db.insert(appSettings).values({ key, value })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value } });
+  }
+  async getAllSettings(): Promise<Record<string, string>> {
+    const rows = await db.select().from(appSettings);
+    return Object.fromEntries(rows.map(r => [r.key, r.value]));
   }
 }
 

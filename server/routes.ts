@@ -17,9 +17,14 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { hash, compare } from "bcrypt";
 
+async function getTelegramCredentials() {
+  const token = process.env.TELEGRAM_BOT_TOKEN || await storage.getSetting("TELEGRAM_BOT_TOKEN");
+  const chatId = process.env.TELEGRAM_CHAT_ID || await storage.getSetting("TELEGRAM_CHAT_ID");
+  return { token, chatId };
+}
+
 async function sendTelegramNotification(message: string) {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
+  const { token, chatId } = await getTelegramCredentials();
   if (!token || !chatId) return;
   try {
     await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -512,7 +517,7 @@ export async function registerRoutes(
 
   // --- Bunny.net Stream Analytics ---
   app.get("/api/admin/bunny-analytics", requireAdmin, async (req, res) => {
-    const apiKey = process.env.BUNNY_API_KEY;
+    const apiKey = process.env.BUNNY_API_KEY || await storage.getSetting("BUNNY_API_KEY");
     const libraryId = "617163";
 
     if (!apiKey) {
@@ -691,8 +696,7 @@ export async function registerRoutes(
   });
 
   app.post("/api/admin/broadcasts/test-telegram", requireAdmin, async (req, res) => {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    const { token, chatId } = await getTelegramCredentials();
     if (!token || !chatId) {
       return res.status(400).json({ message: "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured." });
     }
@@ -702,6 +706,31 @@ export async function registerRoutes(
     } catch (err) {
       res.status(500).json({ message: "Failed to send test message" });
     }
+  });
+
+  // --- App Settings (API Tokens) ---
+  const ALLOWED_SETTING_KEYS = ["BUNNY_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"];
+
+  app.get("/api/admin/settings", requireAdmin, async (req, res) => {
+    const all = await storage.getAllSettings();
+    const result: Record<string, string> = {};
+    for (const key of ALLOWED_SETTING_KEYS) {
+      result[key] = all[key] ?? "";
+    }
+    res.json(result);
+  });
+
+  app.post("/api/admin/settings", requireAdmin, async (req, res) => {
+    const body = req.body as Record<string, string>;
+    for (const key of ALLOWED_SETTING_KEYS) {
+      if (key in body) {
+        const val = String(body[key] ?? "").trim();
+        if (val) {
+          await storage.setSetting(key, val);
+        }
+      }
+    }
+    res.json({ success: true });
   });
 
   await seedDatabase();

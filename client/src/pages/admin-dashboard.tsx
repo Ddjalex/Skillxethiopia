@@ -10,7 +10,7 @@ import {
   ChevronRight, ShieldCheck, TrendingUp, Menu, X,
   Download, BarChart2, ShoppingCart, Megaphone, Tag,
   Flame, Sparkles, Send, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
-  Eye, Play, Wifi, Clock, Film, AlertTriangle
+  Eye, EyeOff, Play, Wifi, Clock, Film, AlertTriangle, KeyRound, Save
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -1880,10 +1880,78 @@ function AddEpisodeDialog({ courseId, seasons: initialSeasons }: { courseId: num
   );
 }
 
+function TokenInput({
+  label, description, value, onChange, placeholder
+}: {
+  label: string; description: string; value: string; onChange: (v: string) => void; placeholder?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="space-y-1.5">
+      <Label>{label}</Label>
+      <p className="text-xs text-muted-foreground">{description}</p>
+      <div className="flex items-center rounded-md border border-input bg-background overflow-hidden h-10 focus-within:ring-1 focus-within:ring-ring">
+        <input
+          type={visible ? "text" : "password"}
+          className="flex-1 h-full px-3 text-sm bg-transparent outline-none font-mono"
+          placeholder={placeholder ?? `Enter ${label}`}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          data-testid={`input-token-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
+        />
+        <button
+          type="button"
+          className="px-3 h-full text-muted-foreground hover:text-foreground transition-colors flex-shrink-0"
+          onClick={() => setVisible(v => !v)}
+          tabIndex={-1}
+          data-testid={`toggle-visibility-${label.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
+        >
+          {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AdminSettings() {
   const { toast } = useToast();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+
+  const [tokens, setTokens] = useState({
+    BUNNY_API_KEY: "",
+    TELEGRAM_BOT_TOKEN: "",
+    TELEGRAM_CHAT_ID: "",
+  });
+
+  const { isLoading: tokensLoading, data: savedSettings } = useQuery<Record<string, string>>({
+    queryKey: ["/api/admin/settings"],
+  });
+
+  useEffect(() => {
+    if (savedSettings) {
+      setTokens({
+        BUNNY_API_KEY: savedSettings.BUNNY_API_KEY ?? "",
+        TELEGRAM_BOT_TOKEN: savedSettings.TELEGRAM_BOT_TOKEN ?? "",
+        TELEGRAM_CHAT_ID: savedSettings.TELEGRAM_CHAT_ID ?? "",
+      });
+    }
+  }, [savedSettings]);
+
+  const saveTokens = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/settings", tokens);
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] });
+      toast({ title: "Tokens saved", description: "API keys updated successfully." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
 
   const changePassword = useMutation({
     mutationFn: async () => {
@@ -1906,6 +1974,58 @@ function AdminSettings() {
       <PageHeader title="Settings" subtitle="Manage your admin account and preferences." />
 
       <div className="card-base p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <KeyRound className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="font-semibold text-sm">API Tokens</p>
+            <p className="text-xs text-muted-foreground">Configure third-party integration keys used by the platform.</p>
+          </div>
+        </div>
+
+        {tokensLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading saved tokens...
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <TokenInput
+              label="BUNNY_API_KEY"
+              description="Used for Bunny.net video analytics and stream management."
+              value={tokens.BUNNY_API_KEY}
+              onChange={(v) => setTokens(t => ({ ...t, BUNNY_API_KEY: v }))}
+              placeholder="Enter Bunny.net API key"
+            />
+            <TokenInput
+              label="TELEGRAM_BOT_TOKEN"
+              description="Your Telegram bot token for sending notifications."
+              value={tokens.TELEGRAM_BOT_TOKEN}
+              onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_BOT_TOKEN: v }))}
+              placeholder="123456789:ABC-..."
+            />
+            <TokenInput
+              label="TELEGRAM_CHAT_ID"
+              description="The chat or channel ID where notifications will be sent."
+              value={tokens.TELEGRAM_CHAT_ID}
+              onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_CHAT_ID: v }))}
+              placeholder="-100123456789"
+            />
+            <Button
+              className="w-full"
+              onClick={() => saveTokens.mutate()}
+              disabled={saveTokens.isPending}
+              data-testid="button-save-tokens"
+            >
+              {saveTokens.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="mr-2 h-4 w-4" /> Save Tokens</>
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="card-base p-6 space-y-5">
         <div>
           <p className="font-semibold text-sm mb-0.5">Change Password</p>
           <p className="text-xs text-muted-foreground">Update your security credentials.</p>
@@ -1918,6 +2038,7 @@ function AdminSettings() {
               className="h-10"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
+              data-testid="input-current-password"
             />
           </div>
           <div className="space-y-1.5">
@@ -1927,12 +2048,14 @@ function AdminSettings() {
               className="h-10"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
+              data-testid="input-new-password"
             />
           </div>
           <Button
             className="w-full"
             onClick={() => changePassword.mutate()}
             disabled={changePassword.isPending || !currentPassword || !newPassword}
+            data-testid="button-update-password"
           >
             {changePassword.isPending ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating...</>
