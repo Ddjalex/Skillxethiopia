@@ -1,4 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import logoImg from "@assets/ChatGPT_Image_Mar_20,_2026,_03_44_07_PM_1774010974208.png";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui/table";
@@ -111,8 +112,8 @@ export default function AdminDashboard() {
       )}>
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border flex-shrink-0">
-          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-white">
-            <span className="text-sm font-black">SX</span>
+          <div className="flex items-center justify-center h-8 w-8 rounded-lg overflow-hidden bg-white">
+            <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
           </div>
           <div>
             <p className="font-bold text-sm leading-none"><span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span></p>

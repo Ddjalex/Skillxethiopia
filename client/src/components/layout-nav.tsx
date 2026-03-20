@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Search, LogOut, Menu, X, LayoutDashboard, ShieldCheck, BookOpen } from "lucide-react";
+import logoImg from "@assets/ChatGPT_Image_Mar_20,_2026,_03_44_07_PM_1774010974208.png";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BroadcastBanner } from "@/components/broadcast-banner";
@@ -37,8 +38,8 @@ export function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-          <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white shadow-sm group-hover:scale-105 transition-transform">
-            <span className="text-base font-black">SX</span>
+          <div className="flex items-center justify-center h-9 w-9 rounded-xl overflow-hidden shadow-sm group-hover:scale-105 transition-transform bg-white">
+            <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
           </div>
           <span className="font-extrabold tracking-tight text-lg hidden sm:block">
             <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span>

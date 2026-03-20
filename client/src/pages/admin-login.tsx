@@ -1,4 +1,5 @@
 import { useAuth } from "@/hooks/use-auth";
+import logoImg from "@assets/ChatGPT_Image_Mar_20,_2026,_03_44_07_PM_1774010974208.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,8 +44,8 @@ export default function AdminLoginPage() {
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-amber-600/10 rounded-full blur-[100px] pointer-events-none" />
 
         <Link href="/" className="flex items-center gap-2.5 mb-auto">
-          <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary shadow-lg">
-            <span className="text-lg font-black">SX</span>
+          <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden shadow-lg bg-white">
+            <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
           </div>
           <span className="font-extrabold text-xl tracking-tight">
             <span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span>
@@ -96,8 +97,8 @@ export default function AdminLoginPage() {
 
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-2.5">
-            <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white">
-              <span className="text-base font-black">SX</span>
+            <div className="flex items-center justify-center h-9 w-9 rounded-xl overflow-hidden bg-white">
+              <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
             </div>
             <span className="font-extrabold text-lg tracking-tight text-foreground">
               SkillXethiopia

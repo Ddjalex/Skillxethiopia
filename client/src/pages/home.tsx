@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/layout-nav";
+import logoImg from "@assets/ChatGPT_Image_Mar_20,_2026,_03_44_07_PM_1774010974208.png";
 import { Button } from "@/components/ui/button";
 import { useCourses } from "@/hooks/use-courses";
 import { CourseCard } from "@/components/course-card";
@@ -328,8 +329,8 @@ export default function Home() {
           <div className="grid md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-2">
               <Link href="/" className="flex items-center gap-2.5 font-bold text-xl mb-4">
-                <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-primary text-white flex-shrink-0">
-                  <span className="font-black text-base">SX</span>
+                <div className="flex items-center justify-center h-9 w-9 rounded-xl overflow-hidden flex-shrink-0 bg-white">
+                  <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
                 </div>
                 <span className="tracking-tight text-foreground">SkillXethiopia</span>
               </Link>
