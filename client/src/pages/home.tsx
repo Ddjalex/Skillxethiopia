@@ -160,7 +160,7 @@ export default function Home() {
               <motion.div
                 key={i}
                 variants={fadeUp} initial="hidden" whileInView="show"
-                viewport={{ once: true }} custom={i}
+                viewport={{ once: false }} custom={i}
               >
                 <p className="text-3xl font-black text-foreground mb-1 flex items-center justify-center gap-1.5">
                   {s.icon && <s.icon className="h-5 w-5 fill-amber-400 text-amber-400" />}
@@ -178,7 +178,7 @@ export default function Home() {
         <div className="container mx-auto px-4 lg:px-6">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: true }} className="text-center mb-14"
+            viewport={{ once: false }} className="text-center mb-14"
           >
             <p className="section-label mb-3">Why SkillXethiopia</p>
             <h2 className="text-4xl font-black">Unmatched Learning Experience</h2>
@@ -189,7 +189,7 @@ export default function Home() {
               <motion.div
                 key={i}
                 variants={fadeUp} initial="hidden" whileInView="show"
-                viewport={{ once: true, margin: "-50px" }} custom={i}
+                viewport={{ once: false, margin: "-50px" }} custom={i}
                 className="card-base p-6 hover:shadow-md transition-shadow"
               >
                 <div className={`h-11 w-11 rounded-xl flex items-center justify-center mb-5 ${f.iconBg}`}>
@@ -208,7 +208,7 @@ export default function Home() {
         <div className="container mx-auto px-4 lg:px-6">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             className="flex flex-col md:flex-row items-end justify-between gap-4 mb-10"
           >
             <div>
@@ -241,7 +241,7 @@ export default function Home() {
                 <motion.div
                   key={course.id}
                   variants={fadeUp} initial="hidden" whileInView="show"
-                  viewport={{ once: true }} custom={i}
+                  viewport={{ once: false }} custom={i}
                 >
                   <CourseCard course={course} />
                 </motion.div>
@@ -261,7 +261,7 @@ export default function Home() {
         <div className="container mx-auto px-4 lg:px-6">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: true }} className="text-center mb-14"
+            viewport={{ once: false }} className="text-center mb-14"
           >
             <p className="section-label mb-3">Simple Process</p>
             <h2 className="text-4xl font-black">Start in 3 Steps</h2>
@@ -276,7 +276,7 @@ export default function Home() {
               <motion.div
                 key={i}
                 variants={fadeUp} initial="hidden" whileInView="show"
-                viewport={{ once: true }} custom={i}
+                viewport={{ once: false }} custom={i}
                 className="text-center"
               >
                 <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl border border-border bg-secondary text-xl font-black text-muted-foreground mb-5">
@@ -295,7 +295,7 @@ export default function Home() {
         <div className="container mx-auto px-4 lg:px-6">
           <motion.div
             variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: true }}
+            viewport={{ once: false }}
             className="relative max-w-4xl mx-auto overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-blue-500 to-green-500 p-12 md:p-20 text-center text-white"
           >
             <div className="pointer-events-none absolute top-0 right-0 w-72 h-72 bg-white/10 rounded-full blur-3xl -mr-36 -mt-36" />

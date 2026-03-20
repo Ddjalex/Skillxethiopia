@@ -15,6 +15,7 @@ import Dashboard from "@/pages/dashboard";
 import DashboardCourse from "@/pages/dashboard-course";
 import EpisodePlayer from "@/pages/episode-player";
 import AdminDashboard from "@/pages/admin-dashboard";
+import AdminLoginPage from "@/pages/admin-login";
 import VideoOnly from "@/pages/video-only";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
       <ProtectedRoute path="/dashboard/course/:courseId/episode/:episodeId" component={EpisodePlayer} />
       
       {/* Admin Routes */}
+      <Route path="/admin/login" component={AdminLoginPage} />
       <ProtectedRoute path="/admin" component={AdminDashboard} adminOnly />
       
       <Route component={NotFound} />

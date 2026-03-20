@@ -23,11 +23,11 @@ export function ProtectedRoute({ path, component: Component, adminOnly }: Protec
         }
 
         if (!user) {
-          return <Redirect to="/auth" />;
+          return <Redirect to={adminOnly ? "/admin/login" : "/auth"} />;
         }
 
         if (adminOnly && user.role !== "ADMIN") {
-          return <Redirect to="/" />;
+          return <Redirect to="/admin/login" />;
         }
 
         return <Component {...params} />;
