@@ -17,6 +17,21 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { hash, compare } from "bcrypt";
 
+async function sendTelegramNotification(message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return;
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+    });
+  } catch (err) {
+    console.error("Telegram notification failed:", err);
+  }
+}
+
 declare global {
   namespace Express {
     interface User extends UserSchema {}
@@ -556,6 +571,83 @@ export async function registerRoutes(
   app.delete("/api/admin/payment-options/:id", requireAdmin, async (req, res) => {
     await storage.deletePaymentOption(Number(req.params.id));
     res.status(204).end();
+  });
+
+  // --- Broadcast Routes ---
+  app.get("/api/broadcasts/active", async (req, res) => {
+    const broadcast = await storage.getActiveBroadcast();
+    res.json(broadcast || null);
+  });
+
+  app.get("/api/admin/broadcasts", requireAdmin, async (req, res) => {
+    const all = await storage.getBroadcasts();
+    res.json(all);
+  });
+
+  app.post("/api/admin/broadcasts", requireAdmin, async (req, res) => {
+    try {
+      const body = req.body;
+      if (body.isActive) {
+        await storage.deactivateAllBroadcasts();
+      }
+      const created = await storage.createBroadcast(body);
+      if (created.isActive) {
+        const typeEmoji: Record<string, string> = { DISCOUNT: "🏷️", SALE: "🔥", ANNOUNCEMENT: "📢", UPDATE: "🆕" };
+        const emoji = typeEmoji[created.type] || "📢";
+        let tgMsg = `${emoji} <b>SkillXethiopia Broadcast</b>\n\n<b>${created.title}</b>\n${created.message}`;
+        if (created.discountPercent) tgMsg += `\n\n💰 <b>${created.discountPercent}% OFF</b>`;
+        if (created.discountCode) tgMsg += ` | Code: <code>${created.discountCode}</code>`;
+        if (created.ctaText && created.ctaUrl) tgMsg += `\n\n🔗 ${created.ctaText}: ${created.ctaUrl}`;
+        await sendTelegramNotification(tgMsg);
+      }
+      res.status(201).json(created);
+    } catch (err) {
+      console.error("Error creating broadcast:", err);
+      res.status(500).json({ message: "Failed to create broadcast" });
+    }
+  });
+
+  app.patch("/api/admin/broadcasts/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const body = req.body;
+      if (body.isActive) {
+        await storage.deactivateAllBroadcasts();
+        const bc = await storage.updateBroadcast(id, body);
+        const typeEmoji: Record<string, string> = { DISCOUNT: "🏷️", SALE: "🔥", ANNOUNCEMENT: "📢", UPDATE: "🆕" };
+        const emoji = typeEmoji[bc.type] || "📢";
+        let tgMsg = `${emoji} <b>SkillXethiopia Broadcast</b>\n\n<b>${bc.title}</b>\n${bc.message}`;
+        if (bc.discountPercent) tgMsg += `\n\n💰 <b>${bc.discountPercent}% OFF</b>`;
+        if (bc.discountCode) tgMsg += ` | Code: <code>${bc.discountCode}</code>`;
+        if (bc.ctaText && bc.ctaUrl) tgMsg += `\n\n🔗 ${bc.ctaText}: ${bc.ctaUrl}`;
+        await sendTelegramNotification(tgMsg);
+        return res.json(bc);
+      }
+      const updated = await storage.updateBroadcast(id, body);
+      res.json(updated);
+    } catch (err) {
+      console.error("Error updating broadcast:", err);
+      res.status(500).json({ message: "Failed to update broadcast" });
+    }
+  });
+
+  app.delete("/api/admin/broadcasts/:id", requireAdmin, async (req, res) => {
+    await storage.deleteBroadcast(Number(req.params.id));
+    res.status(204).end();
+  });
+
+  app.post("/api/admin/broadcasts/test-telegram", requireAdmin, async (req, res) => {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) {
+      return res.status(400).json({ message: "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured." });
+    }
+    try {
+      await sendTelegramNotification("✅ <b>SkillXethiopia</b> — Telegram integration is working!");
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to send test message" });
+    }
   });
 
   await seedDatabase();

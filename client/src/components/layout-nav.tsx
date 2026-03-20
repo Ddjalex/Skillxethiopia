@@ -13,6 +13,7 @@ import {
 import { Search, LogOut, Menu, X, LayoutDashboard, ShieldCheck, BookOpen } from "lucide-react";
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { BroadcastBanner } from "@/components/broadcast-banner";
 
 export function Navbar() {
   const { user, logoutMutation } = useAuth();
@@ -29,7 +30,9 @@ export function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-border bg-white/90 backdrop-blur-xl shadow-sm">
+    <div className="fixed top-0 z-50 w-full">
+      <BroadcastBanner />
+      <nav className="w-full border-b border-border bg-white/90 backdrop-blur-xl shadow-sm">
       <div className="container mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
 
         {/* Logo */}
@@ -203,5 +206,6 @@ export function Navbar() {
         </div>
       )}
     </nav>
+    </div>
   );
 }

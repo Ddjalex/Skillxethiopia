@@ -1,11 +1,12 @@
 import { db } from "./db";
 import {
-  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions,
+  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts,
   type User, type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
   type AccessGrant, type InsertAccessGrant,
-  type PaymentOption, type InsertPaymentOption
+  type PaymentOption, type InsertPaymentOption,
+  type Broadcast, type InsertBroadcast
 } from "@shared/schema";
 import { eq, or, and, ilike } from "drizzle-orm";
 import session from "express-session";
@@ -66,6 +67,14 @@ export interface IStorage {
   createPaymentOption(option: InsertPaymentOption): Promise<PaymentOption>;
   updatePaymentOption(id: number, option: Partial<InsertPaymentOption>): Promise<PaymentOption>;
   deletePaymentOption(id: number): Promise<void>;
+
+  // Broadcasts
+  getBroadcasts(): Promise<Broadcast[]>;
+  getActiveBroadcast(): Promise<Broadcast | undefined>;
+  createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
+  updateBroadcast(id: number, broadcast: Partial<InsertBroadcast>): Promise<Broadcast>;
+  deleteBroadcast(id: number): Promise<void>;
+  deactivateAllBroadcasts(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -232,6 +241,29 @@ export class DatabaseStorage implements IStorage {
   }
   async deletePaymentOption(id: number): Promise<void> {
     await db.delete(paymentOptions).where(eq(paymentOptions.id, id));
+  }
+
+  // Broadcasts
+  async getBroadcasts(): Promise<Broadcast[]> {
+    return await db.select().from(broadcasts).orderBy(broadcasts.createdAt);
+  }
+  async getActiveBroadcast(): Promise<Broadcast | undefined> {
+    const [broadcast] = await db.select().from(broadcasts).where(eq(broadcasts.isActive, true)).limit(1);
+    return broadcast;
+  }
+  async createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast> {
+    const [created] = await db.insert(broadcasts).values(broadcast).returning();
+    return created;
+  }
+  async updateBroadcast(id: number, broadcast: Partial<InsertBroadcast>): Promise<Broadcast> {
+    const [updated] = await db.update(broadcasts).set(broadcast).where(eq(broadcasts.id, id)).returning();
+    return updated;
+  }
+  async deleteBroadcast(id: number): Promise<void> {
+    await db.delete(broadcasts).where(eq(broadcasts.id, id));
+  }
+  async deactivateAllBroadcasts(): Promise<void> {
+    await db.update(broadcasts).set({ isActive: false });
   }
 }
 

@@ -8,7 +8,8 @@ import {
   Image as ImageIcon, Settings, Pencil, Trash2,
   CreditCard, Upload, LayoutDashboard, FileText,
   ChevronRight, ShieldCheck, TrendingUp, Menu, X,
-  Download, BarChart2, ShoppingCart
+  Download, BarChart2, ShoppingCart, Megaphone, Tag,
+  Flame, Sparkles, Send, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -33,7 +34,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
-type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments" | "analytics";
+type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments" | "analytics" | "broadcasts";
 
 const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -41,6 +42,7 @@ const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
   { id: "categories", label: "Categories", icon: Layers },
   { id: "purchases", label: "Purchases", icon: FileText },
   { id: "analytics", label: "Analytics", icon: BarChart2 },
+  { id: "broadcasts", label: "Broadcasts", icon: Megaphone },
   { id: "users", label: "Users", icon: Users },
   { id: "payments", label: "Payment Options", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Settings },
@@ -205,6 +207,7 @@ export default function AdminDashboard() {
           {activeTab === "categories" && <CategoryManagement categories={categories || []} />}
           {activeTab === "purchases" && <PurchaseManagement />}
           {activeTab === "analytics" && <AnalyticsManagement />}
+          {activeTab === "broadcasts" && <BroadcastsManagement />}
           {activeTab === "users" && <UserManagement users={users || []} />}
           {activeTab === "payments" && (
             <PaymentManagement
@@ -1802,6 +1805,343 @@ function AdminSettings() {
           </Button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── BROADCASTS MANAGEMENT ────────────────────────────────────────────────────
+
+const BROADCAST_COLORS = [
+  { value: "blue",   label: "Blue",   className: "bg-blue-600" },
+  { value: "green",  label: "Green",  className: "bg-emerald-600" },
+  { value: "amber",  label: "Amber",  className: "bg-amber-500" },
+  { value: "red",    label: "Red",    className: "bg-red-600" },
+  { value: "purple", label: "Purple", className: "bg-violet-600" },
+];
+
+const BROADCAST_TYPES = [
+  { value: "ANNOUNCEMENT", label: "Announcement", Icon: Megaphone },
+  { value: "DISCOUNT",     label: "Discount",     Icon: Tag },
+  { value: "SALE",         label: "Sale",         Icon: Flame },
+  { value: "UPDATE",       label: "Update",       Icon: Sparkles },
+];
+
+type BroadcastType = {
+  id: number;
+  title: string;
+  message: string;
+  type: string;
+  discountPercent: number | null;
+  discountCode: string | null;
+  ctaText: string | null;
+  ctaUrl: string | null;
+  bgColor: string;
+  isActive: boolean;
+  createdAt: string;
+};
+
+function BroadcastsManagement() {
+  const { toast } = useToast();
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState({
+    title: "", message: "", type: "ANNOUNCEMENT",
+    discountPercent: "", discountCode: "", ctaText: "", ctaUrl: "",
+    bgColor: "blue", isActive: false,
+  });
+
+  const { data: broadcasts, isLoading } = useQuery<BroadcastType[]>({ queryKey: ["/api/admin/broadcasts"] });
+
+  const resetForm = () => {
+    setForm({ title: "", message: "", type: "ANNOUNCEMENT", discountPercent: "", discountCode: "", ctaText: "", ctaUrl: "", bgColor: "blue", isActive: false });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingId) {
+        const res = await apiRequest("PATCH", `/api/admin/broadcasts/${editingId}`, data);
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/admin/broadcasts", data);
+        if (!res.ok) throw new Error(await res.text());
+        return res.json();
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/broadcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/active"] });
+      toast({ title: editingId ? "Broadcast updated" : "Broadcast created", description: "Changes saved successfully." });
+      resetForm();
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: number; isActive: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/admin/broadcasts/${id}`, { isActive });
+      if (!res.ok) throw new Error(await res.text());
+      return res.json();
+    },
+    onSuccess: (_, { isActive }) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/broadcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/active"] });
+      toast({ title: isActive ? "Broadcast activated" : "Broadcast deactivated", description: isActive ? "Banner is now live on the site." : "Banner has been hidden." });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/broadcasts/${id}`);
+      if (!res.ok) throw new Error(await res.text());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/broadcasts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/active"] });
+      toast({ title: "Broadcast deleted" });
+    },
+    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
+  });
+
+  const testTelegramMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/admin/broadcasts/test-telegram", {});
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message);
+      }
+      return res.json();
+    },
+    onSuccess: () => toast({ title: "Telegram test sent!", description: "Check your Telegram channel for the test message." }),
+    onError: (err: any) => toast({ title: "Telegram not configured", description: err.message, variant: "destructive" }),
+  });
+
+  const handleEdit = (b: BroadcastType) => {
+    setForm({
+      title: b.title, message: b.message, type: b.type,
+      discountPercent: b.discountPercent?.toString() || "",
+      discountCode: b.discountCode || "", ctaText: b.ctaText || "",
+      ctaUrl: b.ctaUrl || "", bgColor: b.bgColor, isActive: b.isActive,
+    });
+    setEditingId(b.id);
+    setShowForm(true);
+  };
+
+  const handleSubmit = () => {
+    if (!form.title.trim() || !form.message.trim()) {
+      toast({ title: "Required fields", description: "Title and message are required.", variant: "destructive" });
+      return;
+    }
+    saveMutation.mutate({
+      title: form.title.trim(),
+      message: form.message.trim(),
+      type: form.type,
+      discountPercent: form.discountPercent ? parseInt(form.discountPercent) : null,
+      discountCode: form.discountCode.trim() || null,
+      ctaText: form.ctaText.trim() || null,
+      ctaUrl: form.ctaUrl.trim() || null,
+      bgColor: form.bgColor,
+      isActive: form.isActive,
+    });
+  };
+
+  const colorMap: Record<string, string> = {
+    blue: "bg-blue-600", green: "bg-emerald-600", amber: "bg-amber-500", red: "bg-red-600", purple: "bg-violet-600",
+  };
+
+  return (
+    <div className="space-y-6 max-w-5xl">
+      <div className="flex items-center justify-between">
+        <PageHeader title="Broadcasts" subtitle="Push announcements, discounts, and alerts to the site banner and Telegram." />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => testTelegramMutation.mutate()} disabled={testTelegramMutation.isPending} className="gap-2 text-xs">
+            {testTelegramMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Test Telegram
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }} className="gap-2">
+            <Plus className="h-4 w-4" /> New Broadcast
+          </Button>
+        </div>
+      </div>
+
+      {/* Form */}
+      {showForm && (
+        <div className="card-base p-6 space-y-5 border-primary/30">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-sm">{editingId ? "Edit Broadcast" : "Create Broadcast"}</h3>
+            <button onClick={resetForm} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Title <span className="text-destructive">*</span></Label>
+              <Input placeholder="e.g. 20% Off All Courses This Weekend!" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {BROADCAST_TYPES.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Message <span className="text-destructive">*</span></Label>
+            <Textarea placeholder="Your announcement message..." value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} className="resize-none h-20" />
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>Discount % <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Input type="number" placeholder="e.g. 20" value={form.discountPercent} onChange={e => setForm(f => ({ ...f, discountPercent: e.target.value }))} className="h-9" min={1} max={100} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Discount Code <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Input placeholder="e.g. LEARN20" value={form.discountCode} onChange={e => setForm(f => ({ ...f, discountCode: e.target.value.toUpperCase() }))} className="h-9 font-mono" />
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label>CTA Button Text <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Input placeholder="e.g. Browse Courses" value={form.ctaText} onChange={e => setForm(f => ({ ...f, ctaText: e.target.value }))} className="h-9" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>CTA URL <span className="text-xs text-muted-foreground">(optional)</span></Label>
+              <Input placeholder="e.g. /browse" value={form.ctaUrl} onChange={e => setForm(f => ({ ...f, ctaUrl: e.target.value }))} className="h-9" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Banner Color</Label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {BROADCAST_COLORS.map(c => (
+                <button
+                  key={c.value}
+                  onClick={() => setForm(f => ({ ...f, bgColor: c.value }))}
+                  className={cn("h-8 w-8 rounded-full transition-all", c.className, form.bgColor === c.value ? "ring-2 ring-offset-2 ring-foreground scale-110" : "hover:scale-105")}
+                  title={c.label}
+                />
+              ))}
+            </div>
+          </div>
+
+          {form.title && (
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Preview</Label>
+              <div className={cn("rounded-lg px-4 py-2.5 text-white text-sm flex items-center gap-3 flex-wrap", colorMap[form.bgColor] || "bg-blue-600")}>
+                {form.type === "DISCOUNT" && <Tag className="h-4 w-4 flex-shrink-0" />}
+                {form.type === "SALE" && <Flame className="h-4 w-4 flex-shrink-0" />}
+                {form.type === "ANNOUNCEMENT" && <Megaphone className="h-4 w-4 flex-shrink-0" />}
+                {form.type === "UPDATE" && <Sparkles className="h-4 w-4 flex-shrink-0" />}
+                <span className="font-semibold">{form.title}</span>
+                <span className="opacity-85">{form.message}</span>
+                {form.discountPercent && <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">{form.discountPercent}% OFF</span>}
+                {form.discountCode && <span className="rounded bg-white/20 px-2 py-0.5 text-xs font-mono font-bold">{form.discountCode}</span>}
+                {form.ctaText && <span className="underline text-xs font-semibold">{form.ctaText} →</span>}
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 rounded" />
+              <span className="text-sm font-medium">Activate immediately (replaces current active banner)</span>
+            </label>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={resetForm}>Cancel</Button>
+              <Button size="sm" onClick={handleSubmit} disabled={saveMutation.isPending} className="gap-2">
+                {saveMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                {editingId ? "Save Changes" : "Create Broadcast"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border bg-secondary/40 p-4 flex items-start gap-3 text-sm">
+        <Send className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+        <div>
+          <p className="font-semibold mb-0.5">Telegram Integration</p>
+          <p className="text-muted-foreground text-xs leading-relaxed">
+            When a broadcast is activated, a notification is sent to your Telegram channel automatically.
+            Set <code className="bg-secondary px-1 rounded">TELEGRAM_BOT_TOKEN</code> and <code className="bg-secondary px-1 rounded">TELEGRAM_CHAT_ID</code> in your environment secrets to enable this.
+          </p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : !broadcasts || broadcasts.length === 0 ? (
+        <div className="card-base p-12 text-center">
+          <Megaphone className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">No broadcasts yet. Create one to show a banner on the site.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {broadcasts.map(b => {
+            const TypeInfo = BROADCAST_TYPES.find(t => t.value === b.type);
+            const TypeIconEl = TypeInfo?.Icon || Megaphone;
+            const color = BROADCAST_COLORS.find(c => c.value === b.bgColor);
+            return (
+              <div key={b.id} className={cn("card-base p-4 flex items-start gap-4 transition-all", b.isActive && "border-emerald-200 bg-emerald-50/30")}>
+                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 text-white", color?.className || "bg-blue-600")}>
+                  <TypeIconEl className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-semibold text-sm">{b.title}</span>
+                    <Badge variant={b.isActive ? "default" : "secondary"} className="text-[10px] h-4 px-1.5">
+                      {b.isActive ? "LIVE" : "OFF"}
+                    </Badge>
+                    {b.type !== "ANNOUNCEMENT" && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">{TypeInfo?.label}</Badge>
+                    )}
+                    {b.discountPercent && (
+                      <Badge variant="outline" className="text-[10px] h-4 px-1.5">{b.discountPercent}% OFF</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{b.message}</p>
+                  {b.discountCode && (
+                    <p className="text-xs text-muted-foreground mt-0.5">Code: <code className="font-mono bg-secondary px-1 rounded">{b.discountCode}</code></p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <Button
+                    variant="ghost" size="sm"
+                    className={cn("gap-1.5 h-8 text-xs", b.isActive ? "text-emerald-600" : "text-muted-foreground")}
+                    onClick={() => toggleMutation.mutate({ id: b.id, isActive: !b.isActive })}
+                    disabled={toggleMutation.isPending}
+                  >
+                    {b.isActive ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                    {b.isActive ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(b)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(b.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

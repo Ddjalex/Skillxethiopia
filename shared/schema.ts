@@ -2,6 +2,24 @@ import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("ANNOUNCEMENT"), // ANNOUNCEMENT | DISCOUNT | SALE | UPDATE
+  discountPercent: integer("discount_percent"),
+  discountCode: text("discount_code"),
+  ctaText: text("cta_text"),
+  ctaUrl: text("cta_url"),
+  bgColor: text("bg_color").notNull().default("blue"), // blue | green | amber | red | purple
+  isActive: boolean("is_active").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({ id: true, createdAt: true });
+export type Broadcast = typeof broadcasts.$inferSelect;
+export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
+
 export const paymentOptions = pgTable("payment_options", {
   id: serial("id").primaryKey(),
   provider: text("provider").notNull(), // TELEBIRR | CBE_BIRR | HELLOCASH
