@@ -71,6 +71,7 @@ export interface IStorage {
   // Broadcasts
   getBroadcasts(): Promise<Broadcast[]>;
   getActiveBroadcast(): Promise<Broadcast | undefined>;
+  getActiveBroadcasts(): Promise<Broadcast[]>;
   createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
   updateBroadcast(id: number, broadcast: Partial<InsertBroadcast>): Promise<Broadcast>;
   deleteBroadcast(id: number): Promise<void>;
@@ -255,6 +256,9 @@ export class DatabaseStorage implements IStorage {
   async getActiveBroadcast(): Promise<Broadcast | undefined> {
     const [broadcast] = await db.select().from(broadcasts).where(eq(broadcasts.isActive, true)).limit(1);
     return broadcast;
+  }
+  async getActiveBroadcasts(): Promise<Broadcast[]> {
+    return await db.select().from(broadcasts).where(eq(broadcasts.isActive, true));
   }
   async createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast> {
     const [created] = await db.insert(broadcasts).values(broadcast).returning();

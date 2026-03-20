@@ -642,8 +642,8 @@ export async function registerRoutes(
 
   // --- Broadcast Routes ---
   app.get("/api/broadcasts/active", async (req, res) => {
-    const broadcast = await storage.getActiveBroadcast();
-    res.json(broadcast || null);
+    const all = await storage.getActiveBroadcasts();
+    res.json(all);
   });
 
   app.get("/api/admin/broadcasts", requireAdmin, async (req, res) => {
