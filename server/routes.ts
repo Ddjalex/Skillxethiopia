@@ -23,15 +23,23 @@ async function getTelegramCredentials() {
   return { token, chatId };
 }
 
+async function callTelegramSendMessage(token: string, chatId: string, message: string): Promise<void> {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+  });
+  const data = await res.json() as { ok: boolean; description?: string };
+  if (!data.ok) {
+    throw new Error(data.description ?? "Telegram API returned an error");
+  }
+}
+
 async function sendTelegramNotification(message: string) {
   const { token, chatId } = await getTelegramCredentials();
   if (!token || !chatId) return;
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
-    });
+    await callTelegramSendMessage(token, chatId, message);
   } catch (err) {
     console.error("Telegram notification failed:", err);
   }
@@ -701,10 +709,10 @@ export async function registerRoutes(
       return res.status(400).json({ message: "TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured." });
     }
     try {
-      await sendTelegramNotification("✅ <b>SkillXethiopia</b> — Telegram integration is working!");
+      await callTelegramSendMessage(token, chatId, "✅ <b>SkillXethiopia</b> — Telegram integration is working!");
       res.json({ success: true });
-    } catch (err) {
-      res.status(500).json({ message: "Failed to send test message" });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message ?? "Failed to send test message" });
     }
   });
 
@@ -731,6 +739,25 @@ export async function registerRoutes(
       }
     }
     res.json({ success: true });
+  });
+
+  // Detect all Telegram channels/chats the bot is a member of
+  app.get("/api/admin/telegram/detect-chats", requireAdmin, async (req, res) => {
+    const { token } = await getTelegramCredentials();
+    if (!token) return res.status(400).json({ message: "TELEGRAM_BOT_TOKEN is not configured." });
+    try {
+      const r = await fetch(`https://api.telegram.org/bot${token}/getUpdates?limit=100&allowed_updates=%5B%22message%22%2C%22channel_post%22%2C%22my_chat_member%22%5D`);
+      const data = await r.json() as { ok: boolean; result?: any[]; description?: string };
+      if (!data.ok) throw new Error(data.description ?? "Telegram API error");
+      const seen = new Map<string, any>();
+      for (const u of (data.result ?? [])) {
+        const c = u.channel_post?.chat || u.my_chat_member?.chat || u.message?.chat;
+        if (c) seen.set(String(c.id), c);
+      }
+      res.json({ chats: [...seen.values()] });
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
   });
 
   await seedDatabase();

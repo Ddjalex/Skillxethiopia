@@ -1923,6 +1923,7 @@ function AdminSettings() {
     TELEGRAM_BOT_TOKEN: "",
     TELEGRAM_CHAT_ID: "",
   });
+  const [detectedChats, setDetectedChats] = useState<{ id: string; type: string; title?: string; first_name?: string; username?: string }[]>([]);
 
   const { isLoading: tokensLoading, data: savedSettings } = useQuery<Record<string, string>>({
     queryKey: ["/api/admin/settings"],
@@ -1950,6 +1951,26 @@ function AdminSettings() {
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const detectChats = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/admin/telegram/detect-chats", { credentials: "include" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? "Failed to detect chats");
+      }
+      return res.json() as Promise<{ chats: any[] }>;
+    },
+    onSuccess: (data) => {
+      setDetectedChats(data.chats.map(c => ({ ...c, id: String(c.id) })));
+      if (data.chats.length === 0) {
+        toast({ title: "No chats found", description: "Make sure you added the bot as an admin to your channel, then try again.", variant: "destructive" });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Detection failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -2002,13 +2023,54 @@ function AdminSettings() {
               onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_BOT_TOKEN: v }))}
               placeholder="123456789:ABC-..."
             />
-            <TokenInput
-              label="TELEGRAM_CHAT_ID"
-              description="The chat or channel ID where notifications will be sent."
-              value={tokens.TELEGRAM_CHAT_ID}
-              onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_CHAT_ID: v }))}
-              placeholder="-100123456789"
-            />
+            <div className="space-y-2">
+              <TokenInput
+                label="TELEGRAM_CHAT_ID"
+                description="The channel ID where notifications will be sent. Must add the bot as admin to your channel first."
+                value={tokens.TELEGRAM_CHAT_ID}
+                onChange={(v) => setTokens(t => ({ ...t, TELEGRAM_CHAT_ID: v }))}
+                placeholder="-100123456789"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full text-xs gap-2"
+                onClick={() => detectChats.mutate()}
+                disabled={detectChats.isPending || !tokens.TELEGRAM_BOT_TOKEN}
+                data-testid="button-detect-channel"
+              >
+                {detectChats.isPending ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Detecting chats...</>
+                ) : (
+                  <><Send className="h-3.5 w-3.5" /> Auto-detect channel ID</>
+                )}
+              </Button>
+              {detectedChats.length > 0 && (
+                <div className="rounded-md border border-border bg-secondary/40 p-2 space-y-1.5">
+                  <p className="text-xs text-muted-foreground font-medium px-1">Select your channel:</p>
+                  {detectedChats.map(chat => (
+                    <button
+                      key={chat.id}
+                      type="button"
+                      onClick={() => {
+                        setTokens(t => ({ ...t, TELEGRAM_CHAT_ID: chat.id }));
+                        setDetectedChats([]);
+                        toast({ title: "Chat ID selected", description: `Set to ${chat.id}` });
+                      }}
+                      className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-background border border-border hover:bg-secondary text-sm transition-colors text-left"
+                      data-testid={`select-chat-${chat.id}`}
+                    >
+                      <span className="font-medium truncate">{chat.title || chat.first_name || chat.username || "Unknown"}</span>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span className="text-xs text-muted-foreground capitalize">{chat.type}</span>
+                        <code className="text-xs font-mono text-muted-foreground">{chat.id}</code>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Button
               className="w-full"
               onClick={() => saveTokens.mutate()}
@@ -2176,7 +2238,7 @@ function BroadcastsManagement() {
       return res.json();
     },
     onSuccess: () => toast({ title: "Telegram test sent!", description: "Check your Telegram channel for the test message." }),
-    onError: (err: any) => toast({ title: "Telegram not configured", description: err.message, variant: "destructive" }),
+    onError: (err: any) => toast({ title: "Telegram failed", description: err.message, variant: "destructive" }),
   });
 
   const handleEdit = (b: BroadcastType) => {
