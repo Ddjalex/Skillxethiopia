@@ -45,14 +45,16 @@ async function sendTelegramNotification(message: string) {
   }
 }
 
-async function sendBroadcastToChannel(message: string) {
+async function sendBroadcastToChannel(message: string): Promise<boolean> {
   const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
   const channelId = await storage.getSetting("TELEGRAM_CHANNEL_ID") || process.env.TELEGRAM_CHANNEL_ID;
-  if (!token || !channelId) return;
+  if (!token || !channelId) return false;
   try {
     await callTelegramSendMessage(token, channelId, message);
+    return true;
   } catch (err) {
     console.error("Telegram channel broadcast failed:", err);
+    return false;
   }
 }
 
@@ -665,10 +667,8 @@ export async function registerRoutes(
   app.post("/api/admin/broadcasts", requireAdmin, async (req, res) => {
     try {
       const body = req.body;
-      if (body.isActive) {
-        await storage.deactivateAllBroadcasts();
-      }
       const created = await storage.createBroadcast(body);
+      let telegramSent = false;
       if (created.isActive) {
         const typeEmoji: Record<string, string> = { DISCOUNT: "🏷️", SALE: "🔥", ANNOUNCEMENT: "📢", UPDATE: "🆕" };
         const emoji = typeEmoji[created.type] || "📢";
@@ -676,9 +676,9 @@ export async function registerRoutes(
         if (created.discountPercent) tgMsg += `\n\n💰 <b>${created.discountPercent}% OFF</b>`;
         if (created.discountCode) tgMsg += ` | Code: <code>${created.discountCode}</code>`;
         if (created.ctaText && created.ctaUrl) tgMsg += `\n\n🔗 ${created.ctaText}: ${created.ctaUrl}`;
-        await sendBroadcastToChannel(tgMsg);
+        telegramSent = await sendBroadcastToChannel(tgMsg);
       }
-      res.status(201).json(created);
+      res.status(201).json({ ...created, telegramSent });
     } catch (err) {
       console.error("Error creating broadcast:", err);
       res.status(500).json({ message: "Failed to create broadcast" });
@@ -689,20 +689,18 @@ export async function registerRoutes(
     try {
       const id = Number(req.params.id);
       const body = req.body;
-      if (body.isActive) {
-        await storage.deactivateAllBroadcasts();
-        const bc = await storage.updateBroadcast(id, body);
-        const typeEmoji: Record<string, string> = { DISCOUNT: "🏷️", SALE: "🔥", ANNOUNCEMENT: "📢", UPDATE: "🆕" };
-        const emoji = typeEmoji[bc.type] || "📢";
-        let tgMsg = `${emoji} <b>SkillXethiopia Broadcast</b>\n\n<b>${bc.title}</b>\n${bc.message}`;
-        if (bc.discountPercent) tgMsg += `\n\n💰 <b>${bc.discountPercent}% OFF</b>`;
-        if (bc.discountCode) tgMsg += ` | Code: <code>${bc.discountCode}</code>`;
-        if (bc.ctaText && bc.ctaUrl) tgMsg += `\n\n🔗 ${bc.ctaText}: ${bc.ctaUrl}`;
-        await sendBroadcastToChannel(tgMsg);
-        return res.json(bc);
-      }
       const updated = await storage.updateBroadcast(id, body);
-      res.json(updated);
+      let telegramSent = false;
+      if (updated.isActive) {
+        const typeEmoji: Record<string, string> = { DISCOUNT: "🏷️", SALE: "🔥", ANNOUNCEMENT: "📢", UPDATE: "🆕" };
+        const emoji = typeEmoji[updated.type] || "📢";
+        let tgMsg = `${emoji} <b>SkillXethiopia Broadcast</b>\n\n<b>${updated.title}</b>\n${updated.message}`;
+        if (updated.discountPercent) tgMsg += `\n\n💰 <b>${updated.discountPercent}% OFF</b>`;
+        if (updated.discountCode) tgMsg += ` | Code: <code>${updated.discountCode}</code>`;
+        if (updated.ctaText && updated.ctaUrl) tgMsg += `\n\n🔗 ${updated.ctaText}: ${updated.ctaUrl}`;
+        telegramSent = await sendBroadcastToChannel(tgMsg);
+      }
+      res.json({ ...updated, telegramSent });
     } catch (err) {
       console.error("Error updating broadcast:", err);
       res.status(500).json({ message: "Failed to update broadcast" });

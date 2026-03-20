@@ -2264,10 +2264,13 @@ function BroadcastsManagement() {
         return res.json();
       }
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/broadcasts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/active"] });
       toast({ title: editingId ? "Broadcast updated" : "Broadcast created", description: "Changes saved successfully." });
+      if (data?.isActive && data?.telegramSent === false) {
+        toast({ title: "Telegram not configured", description: "Set TELEGRAM_CHANNEL_ID in Settings to send broadcasts to your channel.", variant: "destructive" });
+      }
       resetForm();
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -2279,10 +2282,13 @@ function BroadcastsManagement() {
       if (!res.ok) throw new Error(await res.text());
       return res.json();
     },
-    onSuccess: (_, { isActive }) => {
+    onSuccess: (data: any, { isActive }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/broadcasts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/broadcasts/active"] });
       toast({ title: isActive ? "Broadcast activated" : "Broadcast deactivated", description: isActive ? "Banner is now live on the site." : "Banner has been hidden." });
+      if (isActive && data?.telegramSent === false) {
+        toast({ title: "Telegram not configured", description: "Set TELEGRAM_CHANNEL_ID in Settings to send broadcasts to your channel.", variant: "destructive" });
+      }
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
   });
@@ -2448,7 +2454,7 @@ function BroadcastsManagement() {
           <div className="flex items-center justify-between pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input type="checkbox" checked={form.isActive} onChange={e => setForm(f => ({ ...f, isActive: e.target.checked }))} className="h-4 w-4 rounded" />
-              <span className="text-sm font-medium">Activate immediately (replaces current active banner)</span>
+              <span className="text-sm font-medium">Activate immediately (show on site &amp; send to Telegram)</span>
             </label>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={resetForm}>Cancel</Button>
