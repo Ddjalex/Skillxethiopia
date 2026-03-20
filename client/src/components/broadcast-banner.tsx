@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X, Tag, Megaphone, Flame, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "wouter";
 import { AnimatePresence, motion } from "framer-motion";
@@ -25,6 +25,14 @@ const colorMap: Record<string, string> = {
   purple: "bg-violet-600 text-white",
 };
 
+const progressColorMap: Record<string, string> = {
+  blue:   "bg-blue-300",
+  green:  "bg-emerald-300",
+  amber:  "bg-amber-200",
+  red:    "bg-red-300",
+  purple: "bg-violet-300",
+};
+
 const TypeIcon: Record<string, React.ComponentType<any>> = {
   DISCOUNT: Tag,
   SALE: Flame,
@@ -32,10 +40,17 @@ const TypeIcon: Record<string, React.ComponentType<any>> = {
   UPDATE: Sparkles,
 };
 
+const SLIDE_INTERVAL = 4000;
+
 export function BroadcastBanner() {
   const [dismissed, setDismissed] = useState(false);
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
 
   const { data: broadcasts } = useQuery<Broadcast[]>({
     queryKey: ["/api/broadcasts/active"],
@@ -47,23 +62,56 @@ export function BroadcastBanner() {
   const goTo = useCallback((index: number, dir: number) => {
     setDirection(dir);
     setCurrent(index);
+    setProgress(0);
+    startTimeRef.current = Date.now();
   }, []);
 
   const goNext = useCallback(() => {
     if (active.length <= 1) return;
-    goTo((current + 1) % active.length, 1);
-  }, [current, active.length, goTo]);
+    setCurrent(prev => {
+      const next = (prev + 1) % active.length;
+      return next;
+    });
+    setDirection(1);
+    setProgress(0);
+    startTimeRef.current = Date.now();
+  }, [active.length]);
 
   const goPrev = useCallback(() => {
     if (active.length <= 1) return;
-    goTo((current - 1 + active.length) % active.length, -1);
-  }, [current, active.length, goTo]);
+    setCurrent(prev => (prev - 1 + active.length) % active.length);
+    setDirection(-1);
+    setProgress(0);
+    startTimeRef.current = Date.now();
+  }, [active.length]);
 
   useEffect(() => {
-    if (active.length <= 1) return;
-    const timer = setInterval(goNext, 10000);
-    return () => clearInterval(timer);
-  }, [active.length, goNext]);
+    if (active.length <= 1 || paused) return;
+
+    timerRef.current = setInterval(() => {
+      setDirection(1);
+      setCurrent(prev => (prev + 1) % active.length);
+      setProgress(0);
+      startTimeRef.current = Date.now();
+    }, SLIDE_INTERVAL);
+
+    progressRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTimeRef.current;
+      setProgress(Math.min((elapsed / SLIDE_INTERVAL) * 100, 100));
+    }, 30);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (progressRef.current) clearInterval(progressRef.current);
+    };
+  }, [active.length, paused]);
+
+  useEffect(() => {
+    if (!paused) {
+      setProgress(0);
+      startTimeRef.current = Date.now();
+    }
+  }, [paused]);
 
   useEffect(() => {
     if (current >= active.length && active.length > 0) {
@@ -76,6 +124,7 @@ export function BroadcastBanner() {
   const safeIndex = Math.min(current, active.length - 1);
   const broadcast = active[safeIndex];
   const colorClass = colorMap[broadcast.bgColor] || colorMap.blue;
+  const progressBarColor = progressColorMap[broadcast.bgColor] || progressColorMap.blue;
   const Icon = TypeIcon[broadcast.type] || Megaphone;
 
   const variants = {
@@ -88,6 +137,8 @@ export function BroadcastBanner() {
     <div
       className={`relative z-[60] w-full overflow-hidden ${colorClass}`}
       data-testid="broadcast-banner"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
     >
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
@@ -97,7 +148,7 @@ export function BroadcastBanner() {
           initial="enter"
           animate="center"
           exit="exit"
-          transition={{ duration: 0.35, ease: "easeInOut" }}
+          transition={{ duration: 0.3, ease: "easeInOut" }}
           className="container mx-auto py-2.5 flex items-center justify-center gap-3 text-sm flex-wrap"
           style={{ paddingLeft: active.length > 1 ? "3.5rem" : "2.5rem", paddingRight: "3.5rem" }}
         >
@@ -141,14 +192,25 @@ export function BroadcastBanner() {
       </AnimatePresence>
 
       {active.length > 1 && (
-        <button
-          onClick={goPrev}
-          className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
-          aria-label="Previous"
-          data-testid="button-broadcast-prev"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
+        <>
+          <button
+            onClick={goPrev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
+            aria-label="Previous"
+            data-testid="button-broadcast-prev"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            onClick={goNext}
+            className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
+            aria-label="Next"
+            data-testid="button-broadcast-next"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </>
       )}
 
       <button
@@ -161,18 +223,7 @@ export function BroadcastBanner() {
       </button>
 
       {active.length > 1 && (
-        <button
-          onClick={goNext}
-          className="absolute right-8 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-white/20 transition-colors"
-          aria-label="Next"
-          data-testid="button-broadcast-next"
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      )}
-
-      {active.length > 1 && (
-        <div className="flex items-center justify-center gap-1 pb-1">
+        <div className="flex items-center justify-center gap-1.5 pb-1">
           {active.map((_, i) => (
             <button
               key={i}
@@ -184,6 +235,16 @@ export function BroadcastBanner() {
               data-testid={`button-broadcast-dot-${i}`}
             />
           ))}
+        </div>
+      )}
+
+      {active.length > 1 && !paused && (
+        <div className="absolute bottom-0 left-0 h-0.5 w-full bg-white/10">
+          <motion.div
+            className={`h-full ${progressBarColor} opacity-70`}
+            style={{ width: `${progress}%` }}
+            transition={{ ease: "linear" }}
+          />
         </div>
       )}
     </div>
