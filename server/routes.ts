@@ -177,6 +177,44 @@ async function downloadBunnyThumbnail(videoRef: string, apiKey: string): Promise
   return null;
 }
 
+// Try sending a Bunny CDN MP4 URL directly to Telegram (no download needed).
+async function sendBunnyVideoByUrl(
+  pullZone: string,
+  videoId: string,
+  token: string,
+  channelId: string,
+  caption: string,
+): Promise<boolean> {
+  const resolutions = ["360", "480", "720"];
+  for (const res of resolutions) {
+    const videoUrl = `https://${pullZone}.b-cdn.net/${videoId}/play_${res}p.mp4`;
+    console.log(`Bunny: trying sendVideo by URL at ${res}p: ${videoUrl}`);
+    try {
+      const res2 = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: channelId,
+          video: videoUrl,
+          caption,
+          parse_mode: "HTML",
+          supports_streaming: true,
+        }),
+        signal: AbortSignal.timeout(30000),
+      });
+      const data = await res2.json() as { ok: boolean; description?: string };
+      if (data.ok) {
+        console.log(`Bunny ${res}p video sent to Telegram via URL successfully`);
+        return true;
+      }
+      console.log(`Telegram sendVideo URL failed for ${res}p:`, data.description);
+    } catch (err: any) {
+      console.log(`sendVideo URL attempt failed for ${res}p:`, err.message);
+    }
+  }
+  return false;
+}
+
 // Download a Bunny Stream video binary and upload it directly to Telegram.
 // We try multiple resolutions (lowest first to stay within Telegram's 50MB limit).
 async function downloadAndSendBunnyVideoToTelegram(
@@ -197,11 +235,15 @@ async function downloadAndSendBunnyVideoToTelegram(
     return false;
   }
 
-  // Try resolutions from lowest to highest — lowest is most likely within Telegram's 50 MB cap
+  // 1. First try sending the video by URL (fast, no download)
+  const sentByUrl = await sendBunnyVideoByUrl(pullZone, videoId, token, channelId, caption);
+  if (sentByUrl) return true;
+
+  // 2. Fall back to binary download
   const resolutions = ["360", "480", "720"];
   for (const res of resolutions) {
     const videoUrl = `https://${pullZone}.b-cdn.net/${videoId}/play_${res}p.mp4`;
-    console.log(`Bunny: trying ${res}p at ${videoUrl}`);
+    console.log(`Bunny: trying binary download ${res}p at ${videoUrl}`);
     try {
       const videoRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
       if (!videoRes.ok) {
@@ -221,7 +263,6 @@ async function downloadAndSendBunnyVideoToTelegram(
         continue;
       }
 
-      // Upload as binary to Telegram
       const formData = new FormData();
       formData.append("chat_id", channelId);
       formData.append("caption", caption);
@@ -235,7 +276,7 @@ async function downloadAndSendBunnyVideoToTelegram(
       });
       const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
       if (uploadData.ok) {
-        console.log(`Bunny ${res}p video sent to Telegram successfully`);
+        console.log(`Bunny ${res}p video sent to Telegram (binary) successfully`);
         return true;
       }
       console.log(`Telegram sendVideo binary failed for ${res}p:`, uploadData.description);
@@ -1132,7 +1173,20 @@ export async function registerRoutes(
           }
         }
 
-        // 3. Final fallback: plain text message
+        // 3. Try course thumbnail as photo fallback
+        if (!sent) {
+          const courseThumbnail = course.thumbnailUrl;
+          if (courseThumbnail && courseThumbnail.startsWith("http")) {
+            try {
+              await callTelegramSendPhoto(token, channelId, courseThumbnail, caption);
+              sent = true;
+            } catch (err: any) {
+              console.log("Course thumbnail fallback to Telegram failed:", err.message);
+            }
+          }
+        }
+
+        // 4. Final fallback: plain text message
         if (!sent) {
           await callTelegramSendMessage(token, channelId, caption);
         }

@@ -257,39 +257,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── HOW IT WORKS ─────────────────────────────────────────────── */}
-      <section className="py-24">
-        <div className="container mx-auto px-4 lg:px-6">
-          <motion.div
-            variants={fadeUp} initial="hidden" whileInView="show"
-            viewport={{ once: false }} className="text-center mb-14"
-          >
-            <p className="section-label mb-3">Simple Process</p>
-            <h2 className="text-4xl font-black">Start in 3 Steps</h2>
-          </motion.div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
-            {[
-              { step: "01", title: "Create Your Account", desc: "Sign up for free in under 30 seconds — no credit card required." },
-              { step: "02", title: "Pick a Course", desc: "Browse hundreds of expert-led courses across every discipline." },
-              { step: "03", title: "Start Learning", desc: "Pay once and get lifetime access to your course content." },
-            ].map((s, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp} initial="hidden" whileInView="show"
-                viewport={{ once: false }} custom={i}
-                className="text-center"
-              >
-                <div className="inline-flex items-center justify-center h-12 w-12 rounded-xl border border-border bg-secondary text-xl font-black text-muted-foreground mb-5">
-                  {s.step}
-                </div>
-                <h3 className="text-base font-bold mb-2">{s.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ─── CTA ──────────────────────────────────────────────────────── */}
       <section className="py-20">
