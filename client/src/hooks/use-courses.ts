@@ -149,6 +149,19 @@ export function useBuyItem() {
   });
 }
 
+export function useRelatedCourses(slug: string) {
+  return useQuery({
+    queryKey: ["/api/courses", slug, "related"],
+    queryFn: async () => {
+      const res = await fetch(`/api/courses/${slug}/related`);
+      if (!res.ok) return [];
+      return res.json() as Promise<any[]>;
+    },
+    enabled: !!slug,
+    refetchInterval: false,
+  });
+}
+
 export function useEpisodeStream(id: number) {
   return useQuery({
     queryKey: [api.protected.stream.path, id],

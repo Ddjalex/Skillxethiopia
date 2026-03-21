@@ -208,6 +208,13 @@ export async function registerRoutes(
     res.json(coursesWithStats);
   });
 
+  app.get("/api/courses/:slug/related", requireAuth, async (req, res) => {
+    const course = await storage.getCourseBySlug(req.params.slug);
+    if (!course) return res.status(404).json({ message: "Not found" });
+    const related = await storage.getRelatedCourses(course.id, 5);
+    res.json(related);
+  });
+
   app.get(api.public.courseDetail.path, requireAuth, async (req, res) => {
     const course = await storage.getCourseBySlug(req.params.slug);
     if (!course) return res.status(404).json({ message: "Course not found" });

@@ -82,6 +82,7 @@ export interface IStorage {
   getCourseRating(userId: number, courseId: number): Promise<CourseRating | undefined>;
   upsertCourseRating(userId: number, courseId: number, rating: number): Promise<CourseRating>;
   getCourseStats(courseId: number): Promise<{ avgRating: number; totalStudents: number }>;
+  getRelatedCourses(courseId: number, limit?: number): Promise<(Course & { category?: Category; avgRating: number; totalStudents: number })[]>;
 
   // App Settings
   getSetting(key: string): Promise<string | undefined>;
@@ -323,6 +324,86 @@ export class DatabaseStorage implements IStorage {
     }
 
     return { avgRating, totalStudents };
+  }
+
+  async getRelatedCourses(courseId: number, limit = 5): Promise<(Course & { category?: Category; avgRating: number; totalStudents: number })[]> {
+    // Find courses bought by users who also bought this course (collaborative filtering)
+    const result = await db.execute(sql`
+      WITH course_buyers AS (
+        SELECT DISTINCT p.user_id
+        FROM purchases p
+        JOIN seasons s ON p.item_type = 'SEASON' AND p.item_id = s.id AND s.course_id = ${courseId}
+        WHERE p.status = 'PAID'
+        UNION
+        SELECT DISTINCT p.user_id
+        FROM purchases p
+        JOIN episodes e ON p.item_type = 'EPISODE' AND p.item_id = e.id
+        JOIN seasons s ON e.season_id = s.id AND s.course_id = ${courseId}
+        WHERE p.status = 'PAID'
+      ),
+      related_course_ids AS (
+        SELECT s.course_id, COUNT(DISTINCT p.user_id) AS co_buyers
+        FROM purchases p
+        JOIN seasons s ON p.item_type = 'SEASON' AND p.item_id = s.id
+        WHERE p.user_id IN (SELECT user_id FROM course_buyers)
+          AND p.status = 'PAID'
+          AND s.course_id != ${courseId}
+        GROUP BY s.course_id
+        UNION ALL
+        SELECT s.course_id, COUNT(DISTINCT p.user_id) AS co_buyers
+        FROM purchases p
+        JOIN episodes e ON p.item_type = 'EPISODE' AND p.item_id = e.id
+        JOIN seasons s ON e.season_id = s.id
+        WHERE p.user_id IN (SELECT user_id FROM course_buyers)
+          AND p.status = 'PAID'
+          AND s.course_id != ${courseId}
+        GROUP BY s.course_id
+      ),
+      ranked AS (
+        SELECT course_id, SUM(co_buyers) AS total_buyers
+        FROM related_course_ids
+        GROUP BY course_id
+        ORDER BY total_buyers DESC
+        LIMIT ${limit}
+      )
+      SELECT c.*, cat.id AS cat_id, cat.name AS cat_name, cat.slug AS cat_slug,
+             ranked.total_buyers
+      FROM ranked
+      JOIN courses c ON c.id = ranked.course_id
+      LEFT JOIN categories cat ON cat.id = c.category_id
+    `);
+
+    let rows = result.rows as any[];
+
+    // Fallback: if no co-buyers found, return same-category courses
+    if (rows.length === 0) {
+      const thisCourse = await this.getCourse(courseId);
+      if (thisCourse) {
+        const fallback = await db.execute(sql`
+          SELECT c.*, cat.id AS cat_id, cat.name AS cat_name, cat.slug AS cat_slug, 0 AS total_buyers
+          FROM courses c
+          LEFT JOIN categories cat ON cat.id = c.category_id
+          WHERE c.category_id = ${thisCourse.categoryId} AND c.id != ${courseId}
+          LIMIT ${limit}
+        `);
+        rows = fallback.rows as any[];
+      }
+    }
+
+    return Promise.all(rows.map(async (row: any) => {
+      const stats = await this.getCourseStats(row.id);
+      return {
+        id: row.id, categoryId: row.category_id, title: row.title, slug: row.slug,
+        description: row.description, thumbnailUrl: row.thumbnail_url,
+        instructorName: row.instructor_name, instructorImageUrl: row.instructor_image_url,
+        instructorBio: row.instructor_bio, priceStrategy: row.price_strategy,
+        price: row.price, introVideoProvider: row.intro_video_provider,
+        introVideoRef: row.intro_video_ref, createdAt: row.created_at,
+        category: row.cat_id ? { id: row.cat_id, name: row.cat_name, slug: row.cat_slug } as Category : undefined,
+        avgRating: stats.avgRating,
+        totalStudents: stats.totalStudents,
+      };
+    }));
   }
 
   // App Settings

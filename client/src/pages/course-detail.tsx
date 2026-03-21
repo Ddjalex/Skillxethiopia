@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/layout-nav";
-import { useCourseDetail, useBuyItem, useDashboardCourse } from "@/hooks/use-courses";
+import { useCourseDetail, useBuyItem, useDashboardCourse, useRelatedCourses } from "@/hooks/use-courses";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
+import { CourseCard } from "@/components/course-card";
 import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -114,6 +115,7 @@ export default function CourseDetailPage() {
   const { user } = useAuth();
   const buyMutation = useBuyItem();
   const { data: dashboardData } = useDashboardCourse(data?.course?.id || 0);
+  const { data: relatedCourses } = useRelatedCourses(slug);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
   const heroRef = useRef<HTMLDivElement>(null);
@@ -517,6 +519,69 @@ export default function CourseDetailPage() {
                       <p className="text-sm text-muted-foreground mt-4 leading-relaxed">{courseAny.instructorBio}</p>
                     )}
                   </div>
+                </div>
+              </section>
+            )}
+
+            {/* Students also bought */}
+            {relatedCourses && relatedCourses.length > 0 && (
+              <section data-testid="section-related">
+                <h2 className="text-xl font-bold mb-5 pb-3 border-b border-border">Students also bought</h2>
+                <div className="space-y-3">
+                  {relatedCourses.map((rc: any) => (
+                    <Link key={rc.id} href={`/course/${rc.slug}`}>
+                      <div className="flex items-center gap-4 p-3 rounded-xl border border-border bg-card hover:bg-secondary/50 transition-colors cursor-pointer group" data-testid={`related-course-${rc.id}`}>
+                        {/* Thumbnail */}
+                        <div className="w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-secondary">
+                          {rc.thumbnailUrl ? (
+                            <img
+                              src={rc.thumbnailUrl}
+                              alt={rc.title}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5">
+                              <Play className="w-5 h-5 text-primary/30" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold line-clamp-2 group-hover:text-primary transition-colors">{rc.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-0.5">by {rc.instructorName}</p>
+                          <div className="flex items-center gap-3 mt-1.5">
+                            {rc.avgRating > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                                <span className="text-xs font-semibold text-amber-600">{rc.avgRating.toFixed(1)}</span>
+                              </div>
+                            )}
+                            {rc.totalStudents > 0 && (
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Users className="w-3 h-3" />
+                                <span className="text-xs">
+                                  {rc.totalStudents >= 1000
+                                    ? `${(rc.totalStudents / 1000).toFixed(1)}k`
+                                    : rc.totalStudents} students
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="flex-shrink-0 text-right">
+                          {rc.priceStrategy === "FREE" ? (
+                            <span className="text-sm font-bold text-emerald-600">Free</span>
+                          ) : (
+                            <span className="text-sm font-bold">{rc.price} ETB</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </section>
             )}
