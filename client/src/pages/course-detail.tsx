@@ -66,7 +66,9 @@ function InteractiveStarRating({ value, onChange }: { value: number; onChange: (
   );
 }
 
-function VideoPreview({ course }: { course: any }) {
+function VideoPreview({ course, firstPreviewEpisodeId }: { course: any; firstPreviewEpisodeId?: number }) {
+  const [, navigate] = useLocation();
+
   if (course.introVideoRef) {
     const src = course.introVideoProvider === "BUNNY"
       ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
@@ -84,23 +86,39 @@ function VideoPreview({ course }: { course: any }) {
       />
     );
   }
+
+  const handlePreviewClick = () => {
+    if (firstPreviewEpisodeId) {
+      navigate(`/video/${firstPreviewEpisodeId}`);
+    }
+  };
+
   if (course.thumbnailUrl) {
     return (
-      <>
+      <div
+        className={`w-full h-full relative ${firstPreviewEpisodeId ? "cursor-pointer group" : ""}`}
+        onClick={handlePreviewClick}
+        data-testid="video-preview-thumbnail"
+      >
         <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40">
-          <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl mb-3">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/50 transition-colors">
+          <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl mb-3 group-hover:scale-110 transition-transform">
             <Play className="h-7 w-7 fill-gray-900 text-gray-900 ml-1" />
           </div>
           <span className="text-white text-sm font-medium drop-shadow">Preview this course</span>
         </div>
-      </>
+      </div>
     );
   }
+
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-3">
-      <Play className="w-12 h-12 text-white/30" />
-      <span className="text-white/50 text-sm">No preview available</span>
+    <div
+      className={`w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-3 ${firstPreviewEpisodeId ? "cursor-pointer group hover:bg-gray-700 transition-colors" : ""}`}
+      onClick={handlePreviewClick}
+      data-testid="video-preview-empty"
+    >
+      <Play className="w-12 h-12 text-white/30 group-hover:text-white/50 transition-colors" />
+      <span className="text-white/50 text-sm">{firstPreviewEpisodeId ? "Click to watch preview" : "No preview available"}</span>
     </div>
   );
 }
@@ -348,7 +366,7 @@ export default function CourseDetailPage() {
             <div className="xl:hidden -mt-4">
               <div className="bg-card border border-border rounded-xl shadow-xl overflow-hidden">
                 <div className="aspect-video relative bg-gray-900 overflow-hidden">
-                  <VideoPreview course={courseAny} />
+                  <VideoPreview course={courseAny} firstPreviewEpisodeId={previewEpisodes[0]?.id} />
                 </div>
 
                 {previewEpisodes.length > 0 && (
@@ -688,7 +706,7 @@ export default function CourseDetailPage() {
 
                 {/* Video preview */}
                 <div className="aspect-video relative bg-gray-900 overflow-hidden">
-                  <VideoPreview course={course} />
+                  <VideoPreview course={course} firstPreviewEpisodeId={previewEpisodes[0]?.id} />
                 </div>
 
                 {/* Free Sample Videos */}
