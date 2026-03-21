@@ -344,6 +344,88 @@ export default function CourseDetailPage() {
           {/* LEFT MAIN COLUMN */}
           <div className="flex-1 min-w-0 py-10 space-y-12 lg:pr-8 xl:pr-[380px]">
 
+            {/* ── Mobile/Tablet Video + Purchase Card (hidden on xl+ which uses the fixed sidebar) ── */}
+            <div className="xl:hidden -mt-4">
+              <div className="bg-card border border-border rounded-xl shadow-xl overflow-hidden">
+                <div className="aspect-video relative bg-gray-900 overflow-hidden">
+                  <VideoPreview course={courseAny} />
+                </div>
+
+                {previewEpisodes.length > 0 && (
+                  <div className="border-t border-border">
+                    <div className="px-4 pt-3 pb-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Free Sample Videos:</p>
+                    </div>
+                    <div className="divide-y divide-border">
+                      {previewEpisodes.slice(0, 3).map((ep: any) => (
+                        <Link key={ep.id} href={`/video/${ep.id}`}>
+                          <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
+                            <div className="relative flex-shrink-0 w-14 h-9 rounded overflow-hidden bg-gray-800">
+                              {ep.thumbnailUrl || course.thumbnailUrl ? (
+                                <img src={ep.thumbnailUrl || course.thumbnailUrl} alt={ep.title} className="w-full h-full object-cover" />
+                              ) : <div className="w-full h-full bg-gray-700" />}
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                                  <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-xs font-medium line-clamp-2 flex-1">{ep.title}</p>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-4 space-y-3">
+                  {isFree ? (
+                    <>
+                      <div className="text-center">
+                        <span className="text-3xl font-bold text-emerald-600">Free</span>
+                      </div>
+                      <Button className="w-full h-11 text-base font-bold bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Play className="w-4 h-4 mr-2 fill-current" />
+                        Start Learning Free
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      {ctaPrice ? (
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold">{ctaPrice}</span>
+                          <span className="text-base text-muted-foreground font-medium">ETB</span>
+                        </div>
+                      ) : (
+                        <div className="text-center">
+                          <span className="text-2xl font-bold text-emerald-600">All Purchased</span>
+                        </div>
+                      )}
+                      {ctaPrice ? (
+                        <>
+                          <Button
+                            className="w-full h-11 text-base font-bold"
+                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, firstUnlockedSeason.price)}
+                            disabled={buyMutation.isPending}
+                          >
+                            {buyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            Enroll Now
+                          </Button>
+                          <p className="text-xs text-center text-muted-foreground">30-Day Money-Back Guarantee</p>
+                        </>
+                      ) : (
+                        <Link href="/dashboard">
+                          <Button className="w-full h-11 text-base font-bold bg-emerald-600 hover:bg-emerald-700">
+                            Go to My Learning
+                          </Button>
+                        </Link>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* What you'll learn */}
             <section data-testid="section-learn">
               <h2 className="text-xl font-bold mb-5 pb-3 border-b border-border">What you'll learn</h2>
