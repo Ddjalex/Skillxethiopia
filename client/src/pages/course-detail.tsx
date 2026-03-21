@@ -149,10 +149,9 @@ function CoursePreviewModal({
                 width="100%"
                 height="100%"
                 controls
-                playing
                 config={{
-                  vimeo: { playerOptions: { responsive: true, autoplay: true } },
-                  youtube: { playerVars: { autoplay: 1, modestbranding: 1, rel: 0 } },
+                  vimeo: { playerOptions: { responsive: true } },
+                  youtube: { playerVars: { modestbranding: 1, rel: 0 } },
                 }}
               />
             )
