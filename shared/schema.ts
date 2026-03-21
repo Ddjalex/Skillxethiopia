@@ -58,6 +58,10 @@ export const courses = pgTable("courses", {
   description: text("description").notNull(),
   thumbnailUrl: text("thumbnail_url"),
   instructorName: text("instructor_name").notNull(),
+  instructorImageUrl: text("instructor_image_url"),
+  instructorBio: text("instructor_bio"),
+  rating: text("rating").default("0"),
+  totalStudents: integer("total_students").default(0),
   priceStrategy: text("price_strategy").notNull().default("PAID"), // FREE | PAID
   price: text("price").default("0"), // course-level price in ETB (used when priceStrategy=PAID)
   introVideoProvider: text("intro_video_provider").default("BUNNY"), // BUNNY | YOUTUBE | VIMEO | URL
@@ -124,6 +128,10 @@ export const insertCategorySchema = createInsertSchema(categories).omit({ id: tr
 export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, createdAt: true }).extend({
   introVideoRef: z.string().optional().nullable().transform(v => v === "" ? null : v),
   introVideoProvider: z.string().optional().nullable(),
+  instructorImageUrl: z.string().optional().nullable().transform(v => v === "" ? null : v),
+  instructorBio: z.string().optional().nullable().transform(v => v === "" ? null : v),
+  rating: z.string().optional().nullable(),
+  totalStudents: z.number().optional().nullable(),
 });
 export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
 export const insertEpisodeSchema = createInsertSchema(episodes).omit({ id: true, createdAt: true });

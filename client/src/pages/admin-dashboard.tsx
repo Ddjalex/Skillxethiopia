@@ -923,7 +923,7 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
 
   const form = useForm({
     resolver: zodResolver(insertCourseSchema),
-    defaultValues: { title: "", slug: "", description: "", instructorName: "", categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
+    defaultValues: { title: "", slug: "", description: "", instructorName: "", instructorImageUrl: "", instructorBio: "", rating: "0", totalStudents: 0, categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
   });
   const watchedPriceStrategy = form.watch("priceStrategy");
   const watchedIntroVideoProvider = form.watch("introVideoProvider");
@@ -955,6 +955,22 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                 <div className="space-y-1.5">
                   <Label>Instructor Name</Label>
                   <Input {...form.register("instructorName")} placeholder="Instructor Name" className="h-10" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Instructor Image URL <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                  <Input {...form.register("instructorImageUrl")} placeholder="https://..." className="h-10" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Rating <span className="text-muted-foreground font-normal text-xs">(0–5)</span></Label>
+                  <Input {...form.register("rating")} placeholder="4.7" className="h-10" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Total Students</Label>
+                  <Input {...form.register("totalStudents", { valueAsNumber: true })} placeholder="1200" className="h-10" type="number" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                  <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Category</Label>
@@ -1162,7 +1178,11 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       thumbnailUrl: course.thumbnailUrl || "", priceStrategy: course.priceStrategy || "PAID",
       price: course.price || "0",
       introVideoProvider: course.introVideoProvider || "BUNNY",
-      introVideoRef: course.introVideoRef || ""
+      introVideoRef: course.introVideoRef || "",
+      instructorImageUrl: (course as any).instructorImageUrl || "",
+      instructorBio: (course as any).instructorBio || "",
+      rating: (course as any).rating || "0",
+      totalStudents: (course as any).totalStudents || 0,
     }
   });
   const editWatchedPriceStrategy = form.watch("priceStrategy");
@@ -1187,6 +1207,22 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
           <div className="space-y-1.5">
             <Label>Instructor Name</Label>
             <Input {...form.register("instructorName")} className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Instructor Image URL <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+            <Input {...form.register("instructorImageUrl")} placeholder="https://..." className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Rating <span className="text-muted-foreground font-normal text-xs">(0–5)</span></Label>
+            <Input {...form.register("rating")} placeholder="4.7" className="h-10" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Total Students</Label>
+            <Input {...form.register("totalStudents", { valueAsNumber: true })} placeholder="1200" className="h-10" type="number" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+            <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
           </div>
           <div className="space-y-1.5">
             <Label>Category</Label>

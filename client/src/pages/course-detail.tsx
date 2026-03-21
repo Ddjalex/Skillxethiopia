@@ -12,11 +12,34 @@ import {
 } from "@/components/ui/accordion";
 import {
   Loader2, Lock, Play, Clock, CheckCircle, AlertCircle,
-  Users, Star, BookOpen, ChevronRight
+  Users, Star, BookOpen, ChevronRight, GraduationCap
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
 import { useState } from "react";
+
+function StarRating({ rating }: { rating: string | null | undefined }) {
+  const val = parseFloat(rating || "0");
+  if (!val) return null;
+  const full = Math.floor(val);
+  const half = val - full >= 0.5;
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map(i => (
+        <Star
+          key={i}
+          className={`w-4 h-4 ${
+            i <= full
+              ? "fill-amber-400 text-amber-400"
+              : i === full + 1 && half
+                ? "fill-amber-200 text-amber-400"
+                : "text-muted-foreground/30"
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function CourseDetailPage() {
   const [, params] = useRoute("/course/:slug");
@@ -63,6 +86,7 @@ export default function CourseDetailPage() {
   }
 
   const { course, seasons, category } = data;
+  const courseAny = course as any;
 
   const enrichedSeasons = seasons.map(s => {
     const dashboardSeason = dashboardData?.seasons.find(ds => ds.id === s.id);
@@ -78,8 +102,11 @@ export default function CourseDetailPage() {
   });
 
   const totalEpisodes = enrichedSeasons.reduce((acc, s) => acc + s.episodes.length, 0);
-
   const isFree = course?.priceStrategy === "FREE";
+  const ratingVal = parseFloat(courseAny.rating || "0");
+  const hasRating = ratingVal > 0;
+  const totalStudents = courseAny.totalStudents || 0;
+  const hasInstructor = !!(courseAny.instructorImageUrl || courseAny.instructorBio);
 
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) { window.location.href = "/auth"; return; }
@@ -151,13 +178,20 @@ export default function CourseDetailPage() {
                 <span className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" /> Recently updated
                 </span>
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4" /> 1.2k learners
-                </span>
-                <span className="flex items-center gap-1.5 text-amber-500">
-                  <Star className="w-4 h-4 fill-current" />
-                  <span className="font-semibold">4.9</span>
-                </span>
+                {totalStudents > 0 && (
+                  <span className="flex items-center gap-1.5">
+                    <Users className="w-4 h-4" />
+                    {totalStudents >= 1000
+                      ? `${(totalStudents / 1000).toFixed(1)}k`
+                      : totalStudents} learners
+                  </span>
+                )}
+                {hasRating && (
+                  <span className="flex items-center gap-2">
+                    <StarRating rating={courseAny.rating} />
+                    <span className="font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                  </span>
+                )}
                 <Separator orientation="vertical" className="h-4" />
                 <span>
                   By <span className="text-foreground font-semibold">{course.instructorName}</span>
@@ -167,7 +201,7 @@ export default function CourseDetailPage() {
 
             {/* Sticky course card */}
             <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-              <div className="rounded-xl border border-border shadow-md bg-white overflow-hidden">
+              <div className="rounded-xl border border-border shadow-md bg-card overflow-hidden">
                 <div className="aspect-video relative bg-secondary">
                   {course.introVideoRef ? (
                     <iframe
@@ -214,6 +248,17 @@ export default function CourseDetailPage() {
                       <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold">FREE</Badge>
                     )}
                   </div>
+                  {hasRating && (
+                    <div className="flex items-center gap-2">
+                      <StarRating rating={courseAny.rating} />
+                      <span className="text-sm font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                      {totalStudents > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          ({totalStudents >= 1000 ? `${(totalStudents / 1000).toFixed(1)}k` : totalStudents} learners)
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {isFree ? (
                     <p className="text-xs text-center text-green-700 bg-green-50 border border-green-200 rounded-lg py-3 px-2 font-medium">
                       All content is free — watch any episode below
@@ -235,8 +280,10 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      {/* Curriculum */}
-      <div className="container mx-auto px-4 lg:px-6 py-10">
+      {/* Main content */}
+      <div className="container mx-auto px-4 lg:px-6 py-10 space-y-12">
+
+        {/* Curriculum */}
         <div className="max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
             <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -361,6 +408,63 @@ export default function CourseDetailPage() {
             ))}
           </Accordion>
         </div>
+
+        {/* Instructor Section */}
+        {hasInstructor && (
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                <GraduationCap className="h-4 w-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Your Instructor</h2>
+                <p className="text-xs text-muted-foreground">Meet the person teaching this course</p>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex items-start gap-5">
+                {courseAny.instructorImageUrl ? (
+                  <img
+                    src={courseAny.instructorImageUrl}
+                    alt={course.instructorName}
+                    className="w-20 h-20 rounded-full object-cover flex-shrink-0 border-2 border-border shadow-sm"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 border-2 border-border text-2xl font-bold text-primary">
+                    {course.instructorName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-base font-bold">{course.instructorName}</h3>
+                  {hasRating && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <StarRating rating={courseAny.rating} />
+                      <span className="text-sm font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground">Instructor Rating</span>
+                    </div>
+                  )}
+                  {totalStudents > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                      <Users className="w-3.5 h-3.5" />
+                      <span>
+                        {totalStudents >= 1000
+                          ? `${(totalStudents / 1000).toFixed(1)}k`
+                          : totalStudents} Students
+                      </span>
+                    </div>
+                  )}
+                  {courseAny.instructorBio && (
+                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
+                      {courseAny.instructorBio}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
