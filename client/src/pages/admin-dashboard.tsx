@@ -1282,6 +1282,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
   const [addingSection, setAddingSection] = useState(false);
   const [addingEpisodeForSeason, setAddingEpisodeForSeason] = useState<number | null>(null);
   const [inlineEdit, setInlineEdit] = useState<{ type: "season" | "episode"; id: number; value: string } | null>(null);
+  const [broadcastingEpId, setBroadcastingEpId] = useState<number | null>(null);
 
   const { data: courseData, isLoading: contentLoading } = useQuery<any>({
     queryKey: [api.protected.dashboardCourse.path, { id: course.id }],
@@ -1357,6 +1358,32 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
     onError: () => {
       toast({ title: "Error", description: "Failed to update price", variant: "destructive" });
     }
+  });
+
+  const broadcastEpisode = useMutation({
+    mutationFn: async (episodeId: number) => {
+      const res = await fetch(`/api/admin/episodes/${episodeId}/broadcast-telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        let msg = "Failed to broadcast";
+        try { msg = JSON.parse(text).message ?? msg; } catch { msg = text || msg; }
+        throw new Error(msg);
+      }
+      return { success: true };
+    },
+    onMutate: (episodeId) => setBroadcastingEpId(episodeId),
+    onSuccess: () => {
+      setBroadcastingEpId(null);
+      toast({ title: "Sent to Telegram!", description: "Episode preview was broadcast to your channel." });
+    },
+    onError: (err: any) => {
+      setBroadcastingEpId(null);
+      toast({ title: "Broadcast failed", description: err.message, variant: "destructive" });
+    },
   });
 
   const form = useForm({
@@ -1642,6 +1669,20 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                                 <TableCell><InlinePrice type="episode" id={ep.id} price={ep.price} /></TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-1">
+                                    {ep.isPreview && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 text-sky-500 hover:text-sky-600 hover:bg-sky-50"
+                                        title="Broadcast to Telegram channel"
+                                        disabled={broadcastingEpId === ep.id}
+                                        onClick={() => broadcastEpisode.mutate(ep.id)}
+                                      >
+                                        {broadcastingEpId === ep.id
+                                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          : <Send className="h-3.5 w-3.5" />}
+                                      </Button>
+                                    )}
                                     <EditEpisodeDialog episode={ep} courseId={course.id} />
                                     <DeleteConfirmDialog
                                       type="episode"
