@@ -222,6 +222,17 @@ export default function CourseDetailPage() {
   const firstUnlockedSeason = enrichedSeasons.find((s: any) => !s.isUnlocked && !s.isPending);
   const ctaPrice = firstUnlockedSeason?.price || null;
 
+  // Collect all preview episodes for the "Free Sample Videos" section
+  const previewEpisodes: any[] = enrichedSeasons.flatMap((s: any) =>
+    s.episodes.filter((e: any) => e.isPreview)
+  );
+
+  const formatDuration = (sec: number) => {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -597,6 +608,50 @@ export default function CourseDetailPage() {
                 <div className="aspect-video relative bg-gray-900 overflow-hidden">
                   <VideoPreview course={course} />
                 </div>
+
+                {/* Free Sample Videos */}
+                {previewEpisodes.length > 0 && (
+                  <div className="border-t border-border">
+                    <div className="px-4 pt-3 pb-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Free Sample Videos:</p>
+                    </div>
+                    <div className="divide-y divide-border max-h-[220px] overflow-y-auto">
+                      {previewEpisodes.map((ep: any, idx: number) => (
+                        <Link key={ep.id} href={`/video/${ep.id}`} data-testid={`sample-video-${ep.id}`}>
+                          <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
+                            {/* Thumbnail */}
+                            <div className="relative flex-shrink-0 w-16 h-10 rounded overflow-hidden bg-gray-800">
+                              {ep.thumbnailUrl || course.thumbnailUrl ? (
+                                <img
+                                  src={ep.thumbnailUrl || course.thumbnailUrl}
+                                  alt={ep.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-gray-700" />
+                              )}
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                                  <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                            {/* Title + duration */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium leading-snug line-clamp-2">{idx === 0 && course.title ? course.title : ep.title}</p>
+                            </div>
+                            {/* Duration */}
+                            {ep.durationSec > 0 && (
+                              <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
+                                {formatDuration(ep.durationSec)}
+                              </span>
+                            )}
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Price + CTA */}
                 <div className="p-6 space-y-4">
