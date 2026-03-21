@@ -25,6 +25,7 @@ import {
   Dialog, DialogContent, DialogDescription,
   DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -1280,6 +1281,20 @@ function DeleteConfirmDialog({ type, id, onDelete }: { type: "course" | "season"
 function EditCourseDialog({ course, categories }: { course: any; categories: any[] }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [addingSection, setAddingSection] = useState(false);
+  const [addingEpisodeForSeason, setAddingEpisodeForSeason] = useState<number | null>(null);
+  const [inlineEdit, setInlineEdit] = useState<{ type: "season" | "episode"; id: number; value: string } | null>(null);
+
+  const { data: courseData, isLoading: contentLoading } = useQuery<any>({
+    queryKey: [api.protected.dashboardCourse.path, { id: course.id }],
+    queryFn: async () => {
+      const res = await fetch(buildUrl(api.protected.dashboardCourse.path, { id: course.id }));
+      if (!res.ok) throw new Error("Failed to fetch course content");
+      return res.json();
+    },
+    enabled: open && activeTab === "content",
+  });
 
   const updateCourse = useMutation({
     mutationFn: async (data: any) => {
@@ -1296,6 +1311,57 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
     }
   });
 
+  const createSeason = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", api.admin.createSeason.path, { ...data, courseId: course.id });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] });
+      toast({ title: "Section added" });
+      seasonForm.reset();
+      setAddingSection(false);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to add section", variant: "destructive" });
+    }
+  });
+
+  const createEpisode = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", api.admin.createEpisode.path, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] });
+      toast({ title: "Episode added" });
+      episodeForm.reset({ title: "", episodeNumber: 1, description: "", durationSec: 0, isPreview: false, price: "0", videoProvider: "VIMEO", videoRef: "", seasonId: addingEpisodeForSeason ?? 0 });
+      setAddingEpisodeForSeason(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err.message || "Failed to add episode", variant: "destructive" });
+    }
+  });
+
+  const quickUpdatePrice = useMutation({
+    mutationFn: async ({ type, id, price }: { type: "season" | "episode"; id: number; price: string }) => {
+      const path = type === "season"
+        ? buildUrl(api.admin.updateSeason.path, { id })
+        : buildUrl(api.admin.updateEpisode.path, { id });
+      const res = await apiRequest("PUT", path, { price });
+      if (!res.ok) throw new Error("Failed to update price");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] });
+      setInlineEdit(null);
+      toast({ title: "Price updated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update price", variant: "destructive" });
+    }
+  });
+
   const form = useForm({
     resolver: zodResolver(insertCourseSchema),
     defaultValues: {
@@ -1309,108 +1375,323 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       instructorBio: (course as any).instructorBio || "",
     }
   });
+
+  const seasonForm = useForm({
+    resolver: zodResolver(insertSeasonSchema.omit({ courseId: true })),
+    defaultValues: { title: "", seasonNumber: 1, price: "0", instructorName: "" }
+  });
+
+  const episodeForm = useForm({
+    resolver: zodResolver(insertEpisodeSchema),
+    defaultValues: { title: "", episodeNumber: 1, description: "", durationSec: 0, isPreview: false, price: "0", videoProvider: "VIMEO", videoRef: "", seasonId: 0 }
+  });
+
   const editWatchedPriceStrategy = form.watch("priceStrategy");
   const editIntroVideoProvider = form.watch("introVideoProvider");
+  const epVideoProvider = episodeForm.watch("videoProvider");
+
+  const InlinePrice = ({ type, id, price }: { type: "season" | "episode"; id: number; price: string }) => {
+    const isEditing = inlineEdit?.type === type && inlineEdit?.id === id;
+    const isFree = price === "0" || price === "0.00";
+    if (isEditing) {
+      return (
+        <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+          <Input
+            className="h-7 w-20 text-xs px-2"
+            value={inlineEdit.value}
+            onChange={e => setInlineEdit({ ...inlineEdit, value: e.target.value })}
+            onKeyDown={e => {
+              if (e.key === "Enter") quickUpdatePrice.mutate({ type, id, price: inlineEdit.value });
+              if (e.key === "Escape") setInlineEdit(null);
+            }}
+            autoFocus
+          />
+          <Button variant="outline" size="sm" className="h-7 text-xs px-2 text-green-600 border-green-200 hover:bg-green-50" disabled={quickUpdatePrice.isPending} onClick={() => quickUpdatePrice.mutate({ type, id, price: "0" })}>Free</Button>
+          <Button variant="default" size="sm" className="h-7 text-xs px-2" disabled={quickUpdatePrice.isPending} onClick={() => quickUpdatePrice.mutate({ type, id, price: inlineEdit.value })}>Save</Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setInlineEdit(null)}><X className="h-3 w-3" /></Button>
+        </div>
+      );
+    }
+    return (
+      <button className="flex items-center gap-1 group text-left" onClick={() => setInlineEdit({ type, id, value: price })} title="Click to edit price">
+        {isFree ? <span className="badge-success text-xs font-semibold">FREE</span> : <span className="text-xs text-muted-foreground">{price} ETB</span>}
+        <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-40 transition-opacity" />
+      </button>
+    );
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setActiveTab("details"); setAddingSection(false); setAddingEpisodeForSeason(null); } }}>
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-3.5 w-3.5" /></Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh] p-0 gap-0">
-        <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
-          <DialogTitle>Edit Course</DialogTitle>
-        </div>
-        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="flex flex-col flex-1 min-h-0">
-          <div className="overflow-y-auto flex-1 px-6 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Title</Label>
-                <Input {...form.register("title")} className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Slug</Label>
-                <Input {...form.register("slug")} className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Instructor Name</Label>
-                <Input {...form.register("instructorName")} className="h-10" />
-              </div>
-              <div className="space-y-2 col-span-2">
-                <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                <InstructorImageUpload
-                  value={form.watch("instructorImageUrl") || ""}
-                  onChange={(url) => form.setValue("instructorImageUrl", url)}
-                />
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Category</Label>
-                <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))} defaultValue={course.categoryId.toString()}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Price Strategy</Label>
-                <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue={course.priceStrategy || "PAID"}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FREE">Free</SelectItem>
-                    <SelectItem value="PAID">Paid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {editWatchedPriceStrategy === "PAID" && (
-                <div className="space-y-1.5">
-                  <Label>Price (ETB)</Label>
-                  <Input {...form.register("price")} className="h-10" />
+      <DialogContent className="max-w-3xl flex flex-col max-h-[90vh] p-0 gap-0">
+        <div className="px-6 pt-5 pb-0 flex-shrink-0">
+          <DialogTitle className="text-lg font-semibold mb-3">Edit Course</DialogTitle>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="details" className="flex-1">Course Details</TabsTrigger>
+              <TabsTrigger value="content" className="flex-1">Sections & Episodes</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="details" className="mt-0">
+              <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="flex flex-col">
+                <div className="overflow-y-auto px-1 py-4" style={{ maxHeight: "calc(90vh - 160px)" }}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Title</Label>
+                      <Input {...form.register("title")} className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Slug</Label>
+                      <Input {...form.register("slug")} className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Instructor Name</Label>
+                      <Input {...form.register("instructorName")} className="h-10" />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      <InstructorImageUpload
+                        value={form.watch("instructorImageUrl") || ""}
+                        onChange={(url) => form.setValue("instructorImageUrl", url)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Category</Label>
+                      <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))} defaultValue={course.categoryId.toString()}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Price Strategy</Label>
+                      <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue={course.priceStrategy || "PAID"}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FREE">Free</SelectItem>
+                          <SelectItem value="PAID">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {editWatchedPriceStrategy === "PAID" && (
+                      <div className="space-y-1.5">
+                        <Label>Price (ETB)</Label>
+                        <Input {...form.register("price")} className="h-10" />
+                      </div>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label>Thumbnail URL</Label>
+                      <Input {...form.register("thumbnailUrl")} className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Intro Video Provider</Label>
+                      <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue={course.introVideoProvider || "BUNNY"}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                          <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                          <SelectItem value="VIMEO">Vimeo</SelectItem>
+                          <SelectItem value="URL">Direct URL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
+                      {editIntroVideoProvider === "BUNNY" ? (
+                        <BunnyVideoRefInput
+                          value={form.watch("introVideoRef") || ""}
+                          onChange={(v) => form.setValue("introVideoRef", v)}
+                        />
+                      ) : (
+                        <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+                      )}
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Description</Label>
+                      <Textarea {...form.register("description")} rows={3} className="resize-none" />
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="space-y-1.5">
-                <Label>Thumbnail URL</Label>
-                <Input {...form.register("thumbnailUrl")} className="h-10" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Intro Video Provider</Label>
-                <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue={course.introVideoProvider || "BUNNY"}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BUNNY">Bunny.net</SelectItem>
-                    <SelectItem value="YOUTUBE">YouTube</SelectItem>
-                    <SelectItem value="VIMEO">Vimeo</SelectItem>
-                    <SelectItem value="URL">Direct URL</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
-                {editIntroVideoProvider === "BUNNY" ? (
-                  <BunnyVideoRefInput
-                    value={form.watch("introVideoRef") || ""}
-                    onChange={(v) => form.setValue("introVideoRef", v)}
-                  />
+                <div className="py-4 border-t border-border flex-shrink-0 flex justify-end">
+                  <Button type="submit" disabled={updateCourse.isPending}>
+                    {updateCourse.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="content" className="mt-0">
+              <div className="overflow-y-auto py-4 space-y-4" style={{ maxHeight: "calc(90vh - 160px)" }}>
+                {contentLoading ? (
+                  <div className="flex justify-center py-12"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>
                 ) : (
-                  <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+                  <>
+                    {courseData?.seasons?.map((season: any) => (
+                      <div key={season.id} className="border border-border rounded-lg overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 bg-secondary/40 border-b border-border">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="font-semibold text-sm">Section {season.seasonNumber}: {season.title}</p>
+                              {season.instructorName && <p className="text-xs text-muted-foreground">BY {season.instructorName}</p>}
+                            </div>
+                            <InlinePrice type="season" id={season.id} price={season.price} />
+                          </div>
+                          <div className="flex gap-1 items-center">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1 h-7 text-xs"
+                              onClick={() => setAddingEpisodeForSeason(addingEpisodeForSeason === season.id ? null : season.id)}
+                            >
+                              <Plus className="h-3 w-3" /> Episode
+                            </Button>
+                            <EditSeasonDialog season={season} courseId={course.id} />
+                            <DeleteConfirmDialog
+                              type="season"
+                              id={season.id}
+                              onDelete={() => queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] })}
+                            />
+                          </div>
+                        </div>
+
+                        {addingEpisodeForSeason === season.id && (
+                          <div className="px-4 py-3 bg-secondary/10 border-b border-border">
+                            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Add Episode to Section {season.seasonNumber}</p>
+                            <form onSubmit={episodeForm.handleSubmit((data) => createEpisode.mutate({ ...data, seasonId: season.id }))} className="grid grid-cols-2 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Episode Title</Label>
+                                <Input {...episodeForm.register("title")} placeholder="Episode Title" className="h-9 text-sm" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Episode Number</Label>
+                                <Input type="number" {...episodeForm.register("episodeNumber", { valueAsNumber: true })} className="h-9 text-sm" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Video Provider</Label>
+                                <Select onValueChange={(v) => episodeForm.setValue("videoProvider", v)} defaultValue="VIMEO">
+                                  <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="VIMEO">Vimeo</SelectItem>
+                                    <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                                    <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                                    <SelectItem value="DAILYMOTION">DailyMotion</SelectItem>
+                                    <SelectItem value="WISTIA">Wistia</SelectItem>
+                                    <SelectItem value="URL">Direct URL</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Video Ref (ID or URL)</Label>
+                                {epVideoProvider === "BUNNY" ? (
+                                  <BunnyVideoRefInput value={episodeForm.watch("videoRef") || ""} onChange={(v) => episodeForm.setValue("videoRef", v)} />
+                                ) : (
+                                  <Input {...episodeForm.register("videoRef")} placeholder="ID or URL" className="h-9 text-sm" />
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Duration (seconds)</Label>
+                                <Input type="number" {...episodeForm.register("durationSec", { valueAsNumber: true })} className="h-9 text-sm" />
+                              </div>
+                              <div className="flex items-center gap-2 pt-5">
+                                <input type="checkbox" id={`isPreview-${season.id}`} {...episodeForm.register("isPreview")} className="h-4 w-4 rounded border-border" />
+                                <Label htmlFor={`isPreview-${season.id}`} className="font-normal text-sm">Preview Episode</Label>
+                              </div>
+                              <div className="col-span-2 space-y-1">
+                                <Label className="text-xs">Description</Label>
+                                <Textarea {...episodeForm.register("description")} placeholder="Episode description..." rows={2} className="resize-none text-sm" />
+                              </div>
+                              <div className="col-span-2 flex gap-2 justify-end">
+                                <Button type="button" variant="ghost" size="sm" onClick={() => setAddingEpisodeForSeason(null)}>Cancel</Button>
+                                <Button type="submit" size="sm" disabled={createEpisode.isPending}>
+                                  {createEpisode.isPending ? "Adding..." : "Add Episode"}
+                                </Button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
+
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-secondary/10">
+                              <TableHead className="w-10 text-xs">#</TableHead>
+                              <TableHead className="text-xs">Title</TableHead>
+                              <TableHead className="text-xs">Price</TableHead>
+                              <TableHead className="text-right text-xs">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {season.episodes?.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-4">No episodes yet — click "+ Episode" to add one.</TableCell>
+                              </TableRow>
+                            )}
+                            {season.episodes?.map((ep: any) => (
+                              <TableRow key={ep.id} className="hover:bg-secondary/20">
+                                <TableCell className="text-muted-foreground text-xs">{ep.episodeNumber}</TableCell>
+                                <TableCell className="text-sm">
+                                  {ep.title}
+                                  {ep.isPreview && <span className="badge-info ml-2 text-xs">Preview</span>}
+                                </TableCell>
+                                <TableCell><InlinePrice type="episode" id={ep.id} price={ep.price} /></TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    <EditEpisodeDialog episode={ep} courseId={course.id} />
+                                    <DeleteConfirmDialog
+                                      type="episode"
+                                      id={ep.id}
+                                      onDelete={() => queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] })}
+                                    />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))}
+
+                    {addingSection ? (
+                      <div className="border border-dashed border-border rounded-lg px-4 py-4">
+                        <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">New Section</p>
+                        <form onSubmit={seasonForm.handleSubmit((data) => createSeason.mutate(data))} className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Section Title</Label>
+                            <Input {...seasonForm.register("title")} placeholder="e.g. Getting Started" className="h-9 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Section Number</Label>
+                            <Input type="number" {...seasonForm.register("seasonNumber", { valueAsNumber: true })} className="h-9 text-sm" />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Instructor Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                            <Input {...seasonForm.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-9 text-sm" />
+                          </div>
+                          <div className="col-span-2 flex gap-2 justify-end">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setAddingSection(false)}>Cancel</Button>
+                            <Button type="submit" size="sm" disabled={createSeason.isPending}>
+                              {createSeason.isPending ? "Adding..." : "Add Section"}
+                            </Button>
+                          </div>
+                        </form>
+                      </div>
+                    ) : (
+                      <Button variant="outline" className="w-full gap-2 border-dashed" onClick={() => setAddingSection(true)}>
+                        <Plus className="h-4 w-4" /> Add Section
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label>Description</Label>
-                <Textarea {...form.register("description")} rows={3} className="resize-none" />
-              </div>
-            </div>
-          </div>
-          <div className="px-6 py-4 border-t border-border flex-shrink-0 flex justify-end">
-            <Button type="submit" disabled={updateCourse.isPending}>
-              {updateCourse.isPending ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
+            </TabsContent>
+          </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
