@@ -98,30 +98,66 @@ async function sendTelegramNotification(message: string) {
   }
 }
 
-// Download a Bunny Stream video thumbnail using the management API (bypasses CDN hotlink restrictions)
+// Fetch Bunny Stream video metadata (returns PascalCase fields per Bunny API spec)
+async function getBunnyVideoMeta(libraryId: string, videoId: string, apiKey: string): Promise<any | null> {
+  try {
+    const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
+      headers: { AccessKey: apiKey },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      console.log(`Bunny video metadata API returned ${res.status} for ${videoId}`);
+      return null;
+    }
+    const data = await res.json() as any;
+    console.log("Bunny video metadata PullZone:", data.PullZone, "| StorageZone:", data.StorageZone);
+    return data;
+  } catch (err: any) {
+    console.log("Bunny video metadata fetch failed:", err.message);
+    return null;
+  }
+}
+
+// Download a Bunny Stream video thumbnail via the CDN (using PullZone from metadata)
 async function downloadBunnyThumbnail(videoRef: string, apiKey: string): Promise<Buffer | null> {
   const parts = videoRef.split("/");
   if (parts.length < 2) return null;
   const [libraryId, videoId] = [parts[0], parts[1]];
+
+  // Get the CDN pull zone from video metadata (Bunny API uses PascalCase)
+  const meta = await getBunnyVideoMeta(libraryId, videoId, apiKey);
+  const pullZone = meta?.PullZone ?? meta?.pullZone ?? null;
+
+  if (pullZone) {
+    // Primary: thumbnail via CDN pull zone URL
+    try {
+      const thumbUrl = `https://${pullZone}.b-cdn.net/${videoId}/thumbnail.jpg`;
+      const res = await fetch(thumbUrl, { signal: AbortSignal.timeout(8000) });
+      if (res.ok) return Buffer.from(await res.arrayBuffer());
+      console.log(`Bunny CDN thumbnail returned ${res.status}`);
+    } catch (err: any) {
+      console.log("Bunny CDN thumbnail download failed:", err.message);
+    }
+  }
+
+  // Fallback: try the management API thumbnail endpoint
   try {
     const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}/thumbnail`, {
       headers: { AccessKey: apiKey },
       signal: AbortSignal.timeout(8000),
     });
-    if (!res.ok) {
-      console.log(`Bunny thumbnail API returned ${res.status} for ${videoId}`);
-      return null;
-    }
-    return Buffer.from(await res.arrayBuffer());
+    if (res.ok) return Buffer.from(await res.arrayBuffer());
+    console.log(`Bunny management thumbnail API returned ${res.status}`);
   } catch (err: any) {
-    console.log("Bunny thumbnail download failed:", err.message);
-    return null;
+    console.log("Bunny management thumbnail download failed:", err.message);
   }
+
+  return null;
 }
 
 // Download a Bunny Stream video binary and upload it directly to Telegram.
 // We try multiple resolutions (lowest first to stay within Telegram's 50MB limit).
-// Server-to-server requests bypass browser hotlink protection on the CDN.
+// Bunny API uses PascalCase field names — e.g. PullZone not pullZone.
 async function downloadAndSendBunnyVideoToTelegram(
   videoRef: string,
   apiKey: string,
@@ -133,29 +169,22 @@ async function downloadAndSendBunnyVideoToTelegram(
   if (parts.length < 2) return false;
   const [libraryId, videoId] = [parts[0], parts[1]];
 
-  // Get video metadata to find the pull zone (CDN hostname)
-  let pullZone: string | null = null;
-  try {
-    const metaRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
-      headers: { AccessKey: apiKey },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (metaRes.ok) {
-      const meta = await metaRes.json() as any;
-      pullZone = meta.pullZone ?? null;
-    }
-  } catch (err: any) {
-    console.log("Bunny metadata fetch failed:", err.message);
-  }
+  const meta = await getBunnyVideoMeta(libraryId, videoId, apiKey);
+  // Bunny API returns PascalCase — PullZone is the CDN subdomain name
+  // Support both PascalCase (PullZone) and camelCase (pullZone) defensively
+  const pullZone: string | null = meta?.PullZone ?? meta?.pullZone ?? null;
 
-  if (!pullZone) return false;
+  if (!pullZone) {
+    console.log("Bunny: no PullZone found in metadata, cannot build CDN URL");
+    return false;
+  }
 
   // Try resolutions from lowest to highest — lowest is most likely within Telegram's 50 MB cap
   const resolutions = ["360", "480", "720"];
   for (const res of resolutions) {
     const videoUrl = `https://${pullZone}.b-cdn.net/${videoId}/play_${res}p.mp4`;
+    console.log(`Bunny: trying ${res}p at ${videoUrl}`);
     try {
-      // Our server fetches the video; server-to-server bypasses CDN hotlink protection
       const videoRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
       if (!videoRes.ok) {
         console.log(`Bunny CDN ${res}p returned ${videoRes.status}`);
