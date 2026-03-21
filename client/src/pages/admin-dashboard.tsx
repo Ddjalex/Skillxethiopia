@@ -1195,13 +1195,14 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
               <TableHead>Instructor</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Type</TableHead>
+              <TableHead>Price</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {courses.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
                   No courses yet. Create your first course above.
                 </TableCell>
               </TableRow>
@@ -1230,6 +1231,13 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                   {course.priceStrategy === "FREE"
                     ? <span className="badge-success">Free</span>
                     : <span className="badge-info">Paid</span>}
+                </TableCell>
+                <TableCell className="text-sm font-medium">
+                  {course.priceStrategy === "FREE"
+                    ? <span className="text-emerald-600">Free</span>
+                    : (course as any).price && Number((course as any).price) > 0
+                      ? <span>{Number((course as any).price).toLocaleString()} ETB</span>
+                      : <span className="text-muted-foreground text-xs">Per session</span>}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
