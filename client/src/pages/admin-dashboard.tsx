@@ -806,12 +806,18 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
 
   const broadcastEpisodeMutation = useMutation({
     mutationFn: async (episodeId: number) => {
-      const res = await apiRequest("POST", `/api/admin/episodes/${episodeId}/broadcast-telegram`, {});
+      const res = await fetch(`/api/admin/episodes/${episodeId}/broadcast-telegram`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      const text = await res.text();
       if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: "Failed to broadcast" }));
-        throw new Error(err.message);
+        let msg = "Failed to broadcast";
+        try { msg = JSON.parse(text).message ?? msg; } catch { msg = text || msg; }
+        throw new Error(msg);
       }
-      return res.json();
+      return { success: true };
     },
     onMutate: (episodeId) => setBroadcastingEpId(episodeId),
     onSuccess: () => {

@@ -29,27 +29,43 @@ async function getTelegramCredentials() {
 }
 
 async function callTelegramSendMessage(token: string, chatId: string, message: string): Promise<void> {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
-  });
-  const data = await res.json() as { ok: boolean; description?: string };
-  if (!data.ok) {
-    throw new Error(data.description ?? "Telegram API returned an error");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: message, parse_mode: "HTML" }),
+      signal: controller.signal,
+    });
+    const data = await res.json() as { ok: boolean; description?: string };
+    if (!data.ok) throw new Error(data.description ?? "Telegram API returned an error");
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
 async function callTelegramSendPhoto(token: string, chatId: string, photoUrl: string, caption: string): Promise<void> {
-  const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" }),
-  });
-  const data = await res.json() as { ok: boolean; description?: string };
-  if (!data.ok) {
-    // Fall back to plain message if photo fails (e.g. bad URL)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" }),
+      signal: controller.signal,
+    });
+    const data = await res.json() as { ok: boolean; description?: string };
+    if (!data.ok) {
+      // Fall back to plain message if photo fails (e.g. bad URL)
+      await callTelegramSendMessage(token, chatId, caption);
+    }
+  } catch (err: any) {
+    if (err.name === "AbortError") throw new Error("Telegram request timed out");
+    // Photo failed for non-timeout reason — fall back to text
     await callTelegramSendMessage(token, chatId, caption);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
