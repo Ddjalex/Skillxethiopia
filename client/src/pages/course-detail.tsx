@@ -393,29 +393,6 @@ export default function CourseDetailPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
-                          {isFree ? (
-                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-2 py-0.5 font-medium">
-                              <CheckCircle className="w-3 h-3" /> Free
-                            </span>
-                          ) : season.isUnlocked ? (
-                            <span className="inline-flex items-center gap-1 text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-2 py-0.5 font-medium">
-                              <CheckCircle className="w-3 h-3" /> Unlocked
-                            </span>
-                          ) : season.isPending ? (
-                            <span className="inline-flex items-center gap-1 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5 font-medium">
-                              <AlertCircle className="w-3 h-3" /> Pending
-                            </span>
-                          ) : (
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs px-3 rounded-lg"
-                              onClick={(e) => { e.stopPropagation(); handleBuyInitiate("SEASON", season.id, season.price); }}
-                              disabled={buyMutation.isPending}
-                              data-testid={`buy-season-${season.id}`}
-                            >
-                              {season.price} ETB
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </AccordionTrigger>
