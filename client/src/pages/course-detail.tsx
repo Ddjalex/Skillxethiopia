@@ -12,15 +12,16 @@ import {
 import {
   Loader2, Lock, Play, Clock, CheckCircle, AlertCircle,
   Users, Star, BookOpen, ChevronRight,
-  ShieldCheck, Infinity, Smartphone, Trophy, Globe
+  ShieldCheck, Infinity, Smartphone, Trophy, Globe, X
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
 import { CourseCard } from "@/components/course-card";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import ReactPlayer from "react-player";
 
 function StarRating({ rating, size = "md" }: { rating: number; size?: "sm" | "md" }) {
   const full = Math.floor(rating);
@@ -66,9 +67,159 @@ function InteractiveStarRating({ value, onChange }: { value: number; onChange: (
   );
 }
 
-function VideoPreview({ course, firstPreviewEpisodeId }: { course: any; firstPreviewEpisodeId?: number }) {
-  const [, navigate] = useLocation();
+function buildEpisodePlayerUrl(ep: any): string {
+  if (!ep?.videoRef) return "";
+  const ref: string = ep.videoRef;
+  if (ep.videoProvider === "BUNNY") {
+    return ref.startsWith("http") ? ref : `https://iframe.mediadelivery.net/embed/${ref}`;
+  }
+  if (ep.videoProvider === "VIMEO") {
+    return ref.startsWith("http") ? ref : `https://vimeo.com/${ref}`;
+  }
+  if (ep.videoProvider === "YOUTUBE") {
+    return ref.startsWith("http") ? ref : `https://www.youtube.com/watch?v=${ref}`;
+  }
+  if (ep.videoProvider === "DAILYMOTION") {
+    return ref.startsWith("http") ? ref : `https://www.dailymotion.com/video/${ref}`;
+  }
+  return ref;
+}
 
+function CoursePreviewModal({
+  course,
+  episodes,
+  initialIndex,
+  onClose,
+}: {
+  course: any;
+  episodes: any[];
+  initialIndex: number;
+  onClose: () => void;
+}) {
+  const [activeIdx, setActiveIdx] = useState(initialIndex);
+  const activeEp = episodes[activeIdx];
+  const isBunny = activeEp?.videoProvider === "BUNNY";
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      data-testid="preview-modal"
+    >
+      <div className="bg-[#1c1d1f] text-white rounded-lg shadow-2xl w-full max-w-[760px] max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/10 flex-shrink-0">
+          <div className="min-w-0">
+            <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Course Preview</p>
+            <h2 className="text-sm font-bold truncate mt-0.5" data-testid="preview-modal-title">
+              {activeEp?.title || course.title}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="ml-4 flex-shrink-0 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            data-testid="preview-modal-close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Video player */}
+        <div className="aspect-video bg-black flex-shrink-0 relative w-full">
+          {activeEp ? (
+            isBunny ? (
+              <iframe
+                key={activeEp.id}
+                src={buildEpisodePlayerUrl(activeEp)}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                allowFullScreen
+              />
+            ) : (
+              <ReactPlayer
+                key={activeEp.id}
+                url={buildEpisodePlayerUrl(activeEp)}
+                width="100%"
+                height="100%"
+                controls
+                playing
+                config={{
+                  vimeo: { playerOptions: { responsive: true, autoplay: true } },
+                  youtube: { playerVars: { autoplay: 1, modestbranding: 1, rel: 0 } },
+                }}
+              />
+            )
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-white/40 text-sm">
+              No video available
+            </div>
+          )}
+        </div>
+
+        {/* Free Sample Videos list */}
+        {episodes.length > 0 && (
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="px-5 py-3 border-b border-white/10">
+              <p className="text-sm font-semibold">Free Sample Videos:</p>
+            </div>
+            <div className="divide-y divide-white/10">
+              {episodes.map((ep: any, idx: number) => {
+                const isActive = idx === activeIdx;
+                return (
+                  <button
+                    key={ep.id}
+                    onClick={() => setActiveIdx(idx)}
+                    className={`w-full flex items-center gap-3 px-5 py-3 text-left transition-colors ${isActive ? "bg-white/10" : "hover:bg-white/5"}`}
+                    data-testid={`preview-modal-ep-${ep.id}`}
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative flex-shrink-0 w-20 h-12 rounded overflow-hidden bg-gray-700">
+                      {ep.thumbnailUrl || course.thumbnailUrl ? (
+                        <img
+                          src={ep.thumbnailUrl || course.thumbnailUrl}
+                          alt={ep.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gray-600" />
+                      )}
+                      <div className={`absolute inset-0 flex items-center justify-center ${isActive ? "bg-primary/60" : "bg-black/40"}`}>
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isActive ? "bg-white" : "bg-white/80"}`}>
+                          <Play className="w-3 h-3 fill-gray-900 text-gray-900 ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium leading-snug line-clamp-2 ${isActive ? "text-primary" : "text-white"}`}>
+                        {ep.title}
+                      </p>
+                    </div>
+                    {/* Duration */}
+                    {ep.durationSec > 0 && (
+                      <span className="flex-shrink-0 text-xs text-gray-400 tabular-nums">
+                        {Math.floor(ep.durationSec / 60)}:{String(ep.durationSec % 60).padStart(2, "0")}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VideoPreview({ course, onOpen, hasPreview }: { course: any; onOpen?: () => void; hasPreview?: boolean }) {
   if (course.introVideoRef) {
     const src = course.introVideoProvider === "BUNNY"
       ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
@@ -87,21 +238,15 @@ function VideoPreview({ course, firstPreviewEpisodeId }: { course: any; firstPre
     );
   }
 
-  const handlePreviewClick = () => {
-    if (firstPreviewEpisodeId) {
-      navigate(`/video/${firstPreviewEpisodeId}`);
-    }
-  };
-
   if (course.thumbnailUrl) {
     return (
       <div
-        className={`w-full h-full relative ${firstPreviewEpisodeId ? "cursor-pointer group" : ""}`}
-        onClick={handlePreviewClick}
+        className={`w-full h-full relative ${hasPreview ? "cursor-pointer group" : ""}`}
+        onClick={onOpen}
         data-testid="video-preview-thumbnail"
       >
         <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/50 transition-colors">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 group-hover:bg-black/55 transition-colors">
           <div className="h-16 w-16 rounded-full bg-white/90 flex items-center justify-center shadow-xl mb-3 group-hover:scale-110 transition-transform">
             <Play className="h-7 w-7 fill-gray-900 text-gray-900 ml-1" />
           </div>
@@ -113,12 +258,12 @@ function VideoPreview({ course, firstPreviewEpisodeId }: { course: any; firstPre
 
   return (
     <div
-      className={`w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-3 ${firstPreviewEpisodeId ? "cursor-pointer group hover:bg-gray-700 transition-colors" : ""}`}
-      onClick={handlePreviewClick}
+      className={`w-full h-full flex flex-col items-center justify-center bg-gray-800 gap-3 ${hasPreview ? "cursor-pointer group hover:bg-gray-700 transition-colors" : ""}`}
+      onClick={onOpen}
       data-testid="video-preview-empty"
     >
       <Play className="w-12 h-12 text-white/30 group-hover:text-white/50 transition-colors" />
-      <span className="text-white/50 text-sm">{firstPreviewEpisodeId ? "Click to watch preview" : "No preview available"}</span>
+      <span className="text-white/50 text-sm">{hasPreview ? "Click to watch preview" : "No preview available"}</span>
     </div>
   );
 }
@@ -144,6 +289,8 @@ export default function CourseDetailPage() {
     itemId: number | null;
     amount: string;
   }>({ isOpen: false, itemType: null, itemId: null, amount: "" });
+
+  const [previewModal, setPreviewModal] = useState<{ open: boolean; idx: number }>({ open: false, idx: 0 });
 
   const [userRatingVal, setUserRatingVal] = useState<number>(0);
   const [ratingInitialized, setRatingInitialized] = useState(false);
@@ -265,6 +412,15 @@ export default function CourseDetailPage() {
         isPending={buyMutation.isPending}
       />
 
+      {previewModal.open && previewEpisodes.length > 0 && (
+        <CoursePreviewModal
+          course={course}
+          episodes={previewEpisodes}
+          initialIndex={previewModal.idx}
+          onClose={() => setPreviewModal({ open: false, idx: 0 })}
+        />
+      )}
+
       {/* ── DARK HERO HEADER ── */}
       <div ref={heroRef} className="bg-[#1c1d1f] mt-16">
         <div className="max-w-[1340px] mx-auto px-4 lg:px-8">
@@ -366,7 +522,7 @@ export default function CourseDetailPage() {
             <div className="xl:hidden -mt-4">
               <div className="bg-card border border-border rounded-xl shadow-xl overflow-hidden">
                 <div className="aspect-video relative bg-gray-900 overflow-hidden">
-                  <VideoPreview course={courseAny} firstPreviewEpisodeId={previewEpisodes[0]?.id} />
+                  <VideoPreview course={courseAny} onOpen={() => setPreviewModal({ open: true, idx: 0 })} hasPreview={previewEpisodes.length > 0} />
                 </div>
 
                 {previewEpisodes.length > 0 && (
@@ -375,22 +531,25 @@ export default function CourseDetailPage() {
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Free Sample Videos:</p>
                     </div>
                     <div className="divide-y divide-border">
-                      {previewEpisodes.slice(0, 3).map((ep: any) => (
-                        <Link key={ep.id} href={`/video/${ep.id}`}>
-                          <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
-                            <div className="relative flex-shrink-0 w-14 h-9 rounded overflow-hidden bg-gray-800">
-                              {ep.thumbnailUrl || course.thumbnailUrl ? (
-                                <img src={ep.thumbnailUrl || course.thumbnailUrl} alt={ep.title} className="w-full h-full object-cover" />
-                              ) : <div className="w-full h-full bg-gray-700" />}
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
-                                  <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
-                                </div>
+                      {previewEpisodes.slice(0, 3).map((ep: any, idx: number) => (
+                        <button
+                          key={ep.id}
+                          onClick={() => setPreviewModal({ open: true, idx })}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                          data-testid={`sample-video-mobile-${ep.id}`}
+                        >
+                          <div className="relative flex-shrink-0 w-14 h-9 rounded overflow-hidden bg-gray-800">
+                            {ep.thumbnailUrl || course.thumbnailUrl ? (
+                              <img src={ep.thumbnailUrl || course.thumbnailUrl} alt={ep.title} className="w-full h-full object-cover" />
+                            ) : <div className="w-full h-full bg-gray-700" />}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                                <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
                               </div>
                             </div>
-                            <p className="text-xs font-medium line-clamp-2 flex-1">{ep.title}</p>
                           </div>
-                        </Link>
+                          <p className="text-xs font-medium line-clamp-2 flex-1">{ep.title}</p>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -706,7 +865,7 @@ export default function CourseDetailPage() {
 
                 {/* Video preview */}
                 <div className="aspect-video relative bg-gray-900 overflow-hidden">
-                  <VideoPreview course={course} firstPreviewEpisodeId={previewEpisodes[0]?.id} />
+                  <VideoPreview course={course} onOpen={() => setPreviewModal({ open: true, idx: 0 })} hasPreview={previewEpisodes.length > 0} />
                 </div>
 
                 {/* Free Sample Videos */}
@@ -717,37 +876,40 @@ export default function CourseDetailPage() {
                     </div>
                     <div className="divide-y divide-border max-h-[220px] overflow-y-auto">
                       {previewEpisodes.map((ep: any, idx: number) => (
-                        <Link key={ep.id} href={`/video/${ep.id}`} data-testid={`sample-video-${ep.id}`}>
-                          <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer">
-                            {/* Thumbnail */}
-                            <div className="relative flex-shrink-0 w-16 h-10 rounded overflow-hidden bg-gray-800">
-                              {ep.thumbnailUrl || course.thumbnailUrl ? (
-                                <img
-                                  src={ep.thumbnailUrl || course.thumbnailUrl}
-                                  alt={ep.title}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-gray-700" />
-                              )}
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
-                                  <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
-                                </div>
+                        <button
+                          key={ep.id}
+                          onClick={() => setPreviewModal({ open: true, idx })}
+                          className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-muted/50 transition-colors cursor-pointer text-left"
+                          data-testid={`sample-video-${ep.id}`}
+                        >
+                          {/* Thumbnail */}
+                          <div className="relative flex-shrink-0 w-16 h-10 rounded overflow-hidden bg-gray-800">
+                            {ep.thumbnailUrl || course.thumbnailUrl ? (
+                              <img
+                                src={ep.thumbnailUrl || course.thumbnailUrl}
+                                alt={ep.title}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-700" />
+                            )}
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                              <div className="w-5 h-5 rounded-full bg-white/90 flex items-center justify-center">
+                                <Play className="w-2.5 h-2.5 fill-gray-900 text-gray-900 ml-0.5" />
                               </div>
                             </div>
-                            {/* Title + duration */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-medium leading-snug line-clamp-2">{idx === 0 && course.title ? course.title : ep.title}</p>
-                            </div>
-                            {/* Duration */}
-                            {ep.durationSec > 0 && (
-                              <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
-                                {formatDuration(ep.durationSec)}
-                              </span>
-                            )}
                           </div>
-                        </Link>
+                          {/* Title + duration */}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium leading-snug line-clamp-2">{ep.title}</p>
+                          </div>
+                          {/* Duration */}
+                          {ep.durationSec > 0 && (
+                            <span className="flex-shrink-0 text-xs text-muted-foreground tabular-nums">
+                              {formatDuration(ep.durationSec)}
+                            </span>
+                          )}
+                        </button>
                       ))}
                     </div>
                   </div>
