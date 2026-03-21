@@ -1086,30 +1086,15 @@ export async function registerRoutes(
       messageText += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
 
       if (ep.videoProvider === "BUNNY" && ep.videoRef) {
-        // Bunny CDN: send the video thumbnail as a photo with caption.
-        // We do NOT upload the video file itself — just a preview image + info.
-        const bunnyApiKey = (await storage.getSetting("BUNNY_API_KEY")) || process.env.BUNNY_API_KEY;
-        let sent = false;
+        // Bunny CDN: send a photo notification — use the course thumbnail URL directly.
+        // We do NOT upload the video file itself — just a preview image + episode info.
+        const thumbUrl: string | null =
+          (ep as any).thumbnailUrl ||
+          (course.thumbnailUrl && course.thumbnailUrl.startsWith("http") ? course.thumbnailUrl : null);
 
-        if (bunnyApiKey) {
-          const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey);
-          if (thumbBuffer) {
-            const formData = new FormData();
-            formData.append("chat_id", channelId);
-            formData.append("caption", caption);
-            formData.append("parse_mode", "HTML");
-            formData.append("photo", new Blob([thumbBuffer], { type: "image/jpeg" }), "thumbnail.jpg");
-            const uploadRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-              method: "POST",
-              body: formData,
-            });
-            const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
-            if (uploadData.ok) sent = true;
-            else console.log("Bunny thumbnail upload to Telegram failed:", uploadData.description);
-          }
-        }
-
-        if (!sent) {
+        if (thumbUrl) {
+          await callTelegramSendPhoto(token, channelId, thumbUrl, caption);
+        } else {
           await callTelegramSendMessage(token, channelId, caption);
         }
       } else if (ep.videoProvider === "YOUTUBE" || ep.videoProvider === "VIMEO" || ep.videoProvider === "DAILYMOTION") {
