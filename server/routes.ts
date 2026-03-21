@@ -52,7 +52,12 @@ async function sendTelegramNotification(message: string) {
 
 async function sendBroadcastToChannel(message: string): Promise<boolean> {
   const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
-  const channelId = await storage.getSetting("TELEGRAM_CHANNEL_ID") || process.env.TELEGRAM_CHANNEL_ID;
+  // Prefer a dedicated channel ID, fall back to the general chat ID
+  const channelId =
+    (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
+    process.env.TELEGRAM_CHANNEL_ID ||
+    (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
+    process.env.TELEGRAM_CHAT_ID;
   if (!token || !channelId) return false;
   try {
     await callTelegramSendMessage(token, channelId, message);
