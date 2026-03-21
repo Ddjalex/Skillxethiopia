@@ -46,27 +46,46 @@ async function callTelegramSendMessage(token: string, chatId: string, message: s
 }
 
 async function callTelegramSendPhoto(token: string, chatId: string, photoUrl: string, caption: string): Promise<void> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  // Method 1: Try sending via URL (fast, but may fail for CDN-restricted images)
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    const urlRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" }),
-      signal: controller.signal,
     });
-    const data = await res.json() as { ok: boolean; description?: string };
-    if (!data.ok) {
-      // Fall back to plain message if photo fails (e.g. bad URL)
-      await callTelegramSendMessage(token, chatId, caption);
-    }
+    const urlData = await urlRes.json() as { ok: boolean; description?: string };
+    if (urlData.ok) return; // Success — done
+    console.log("Telegram sendPhoto via URL failed:", urlData.description, "— trying binary upload");
   } catch (err: any) {
-    if (err.name === "AbortError") throw new Error("Telegram request timed out");
-    // Photo failed for non-timeout reason — fall back to text
-    await callTelegramSendMessage(token, chatId, caption);
-  } finally {
-    clearTimeout(timeout);
+    console.log("Telegram sendPhoto via URL error:", err.message, "— trying binary upload");
   }
+
+  // Method 2: Download image on our server and upload as binary (works even for CDN-restricted images)
+  try {
+    const imgRes = await fetch(photoUrl, { signal: AbortSignal.timeout(8000) });
+    if (!imgRes.ok) throw new Error(`Image fetch returned ${imgRes.status}`);
+    const imgBuffer = await imgRes.arrayBuffer();
+    const contentType = imgRes.headers.get("content-type") || "image/jpeg";
+
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("caption", caption);
+    formData.append("parse_mode", "HTML");
+    formData.append("photo", new Blob([imgBuffer], { type: contentType }), "thumbnail.jpg");
+
+    const uploadRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: "POST",
+      body: formData,
+    });
+    const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
+    if (uploadData.ok) return; // Success
+    console.error("Telegram sendPhoto binary upload also failed:", uploadData.description);
+  } catch (err: any) {
+    console.error("Telegram sendPhoto binary upload error:", err.message);
+  }
+
+  // Final fallback: plain text message
+  await callTelegramSendMessage(token, chatId, caption);
 }
 
 async function sendTelegramNotification(message: string) {
@@ -79,14 +98,19 @@ async function sendTelegramNotification(message: string) {
   }
 }
 
-async function sendBroadcastToChannel(message: string): Promise<boolean> {
-  const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
-  // Prefer a dedicated channel ID, fall back to the general chat ID
+async function getChannelCredentials(): Promise<{ token: string | undefined; channelId: string | undefined }> {
+  const token = (await storage.getSetting("TELEGRAM_BOT_TOKEN")) || process.env.TELEGRAM_BOT_TOKEN;
+  // TELEGRAM_CHAT_ID holds the channel ID (set by auto-detect). TELEGRAM_CHANNEL_ID is an optional override.
   const channelId =
-    (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
-    process.env.TELEGRAM_CHANNEL_ID ||
     (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
-    process.env.TELEGRAM_CHAT_ID;
+    process.env.TELEGRAM_CHAT_ID ||
+    (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
+    process.env.TELEGRAM_CHANNEL_ID;
+  return { token, channelId };
+}
+
+async function sendBroadcastToChannel(message: string): Promise<boolean> {
+  const { token, channelId } = await getChannelCredentials();
   if (!token || !channelId) return false;
   try {
     await callTelegramSendMessage(token, channelId, message);
@@ -885,24 +909,24 @@ export async function registerRoutes(
 
       const { ep, season, course } = rows[0];
 
-      const token =
-        (await storage.getSetting("TELEGRAM_BOT_TOKEN")) || process.env.TELEGRAM_BOT_TOKEN;
-      const channelId =
-        (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
-        process.env.TELEGRAM_CHANNEL_ID ||
-        (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
-        process.env.TELEGRAM_CHAT_ID;
-
+      const { token, channelId } = await getChannelCredentials();
       if (!token || !channelId) {
         return res.status(400).json({ message: "Telegram is not configured." });
       }
 
       // Build video URL for shareable providers
       let videoUrl: string | null = null;
+      let youtubeVideoId: string | null = null;
+
       if (ep.videoProvider === "YOUTUBE") {
-        videoUrl = ep.videoRef.startsWith("http")
-          ? ep.videoRef
-          : `https://www.youtube.com/watch?v=${ep.videoRef}`;
+        if (ep.videoRef.startsWith("http")) {
+          videoUrl = ep.videoRef;
+          const match = ep.videoRef.match(/[?&]v=([^&]+)/) || ep.videoRef.match(/youtu\.be\/([^?]+)/);
+          youtubeVideoId = match ? match[1] : null;
+        } else {
+          youtubeVideoId = ep.videoRef;
+          videoUrl = `https://www.youtube.com/watch?v=${ep.videoRef}`;
+        }
       } else if (ep.videoProvider === "VIMEO") {
         videoUrl = ep.videoRef.startsWith("http")
           ? ep.videoRef
@@ -923,7 +947,11 @@ export async function registerRoutes(
       if (videoUrl) caption += `\n\n▶️ <a href="${videoUrl}">Watch Now</a>`;
       caption += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
 
-      const thumbnail = (ep as any).thumbnailUrl || course.thumbnailUrl;
+      // Prefer YouTube thumbnail (always publicly accessible) over stored CDN thumbnails
+      const storedThumbnail = (ep as any).thumbnailUrl || course.thumbnailUrl;
+      const thumbnail = youtubeVideoId
+        ? `https://img.youtube.com/vi/${youtubeVideoId}/maxresdefault.jpg`
+        : storedThumbnail;
 
       if (thumbnail && thumbnail.startsWith("http")) {
         await callTelegramSendPhoto(token, channelId, thumbnail, caption);
