@@ -119,6 +119,55 @@ async function downloadBunnyThumbnail(videoRef: string, apiKey: string): Promise
   }
 }
 
+// Get a direct MP4 URL for a Bunny Stream video via the management API
+async function getBunnyDirectVideoUrl(videoRef: string, apiKey: string): Promise<string | null> {
+  const parts = videoRef.split("/");
+  if (parts.length < 2) return null;
+  const [libraryId, videoId] = [parts[0], parts[1]];
+  try {
+    const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
+      headers: { AccessKey: apiKey },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.log(`Bunny video metadata API returned ${res.status} for ${videoId}`);
+      return null;
+    }
+    const data = await res.json() as any;
+    if (data.pullZone && videoId) {
+      return `https://${data.pullZone}.b-cdn.net/${videoId}/play_720p.mp4`;
+    }
+    return null;
+  } catch (err: any) {
+    console.log("Bunny video metadata fetch failed:", err.message);
+    return null;
+  }
+}
+
+// Send a video to Telegram via URL (for direct MP4 links)
+async function callTelegramSendVideo(token: string, chatId: string, videoUrl: string, caption: string): Promise<boolean> {
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        video: videoUrl,
+        caption,
+        parse_mode: "HTML",
+        supports_streaming: true,
+      }),
+    });
+    const data = await res.json() as { ok: boolean; description?: string };
+    if (data.ok) return true;
+    console.log("Telegram sendVideo failed:", data.description);
+    return false;
+  } catch (err: any) {
+    console.log("Telegram sendVideo error:", err.message);
+    return false;
+  }
+}
+
 async function getChannelCredentials(): Promise<{ token: string | undefined; channelId: string | undefined }> {
   const token = (await storage.getSetting("TELEGRAM_BOT_TOKEN")) || process.env.TELEGRAM_BOT_TOKEN;
   // TELEGRAM_CHAT_ID holds the channel ID (set by auto-detect). TELEGRAM_CHANNEL_ID is an optional override.
@@ -960,53 +1009,69 @@ export async function registerRoutes(
         videoUrl = ep.videoRef;
       }
 
-      // Build the caption
+      // Build caption text (used for photo/video sends)
       let caption = `🎬 <b>Free Preview — ${ep.title}</b>\n\n`;
       caption += `📚 <b>${course.title}</b>`;
       if (season.title) caption += ` · ${season.title}`;
       if (ep.description) caption += `\n\n${ep.description}`;
-      if (videoUrl) caption += `\n\n▶️ <a href="${videoUrl}">Watch Now</a>`;
       caption += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
 
-      // Prefer YouTube thumbnail (always publicly accessible) over stored CDN thumbnails
-      const storedThumbnail = (ep as any).thumbnailUrl || course.thumbnailUrl;
-      const thumbnail = youtubeVideoId
-        ? `https://img.youtube.com/vi/${youtubeVideoId}/maxresdefault.jpg`
-        : storedThumbnail;
+      // Build message text for providers where Telegram auto-embeds the video preview
+      // (the raw URL in the text body — NOT wrapped in <a> tags — triggers the embed)
+      let messageText = `🎬 <b>Free Preview — ${ep.title}</b>\n\n`;
+      messageText += `📚 <b>${course.title}</b>`;
+      if (season.title) messageText += ` · ${season.title}`;
+      if (ep.description) messageText += `\n\n${ep.description}`;
+      if (videoUrl) messageText += `\n\n${videoUrl}`;
+      messageText += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
 
       if (ep.videoProvider === "BUNNY" && ep.videoRef) {
-        // Bunny CDN has hotlink protection — download via management API then upload binary to Telegram
+        // Bunny CDN: try to get direct MP4 URL and send as video, else fallback to thumbnail, then text
         const bunnyApiKey = (await storage.getSetting("BUNNY_API_KEY")) || process.env.BUNNY_API_KEY;
-        let sentWithPhoto = false;
+        let sent = false;
 
         if (bunnyApiKey) {
-          const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey);
-          if (thumbBuffer) {
-            const formData = new FormData();
-            formData.append("chat_id", channelId);
-            formData.append("caption", caption);
-            formData.append("parse_mode", "HTML");
-            formData.append("photo", new Blob([thumbBuffer], { type: "image/jpeg" }), "thumbnail.jpg");
-            const uploadRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-              method: "POST",
-              body: formData,
-            });
-            const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
-            if (uploadData.ok) {
-              sentWithPhoto = true;
-            } else {
-              console.log("Bunny thumbnail upload to Telegram failed:", uploadData.description);
+          // Try sending as a real video file
+          const directVideoUrl = await getBunnyDirectVideoUrl(ep.videoRef, bunnyApiKey);
+          if (directVideoUrl) {
+            sent = await callTelegramSendVideo(token, channelId, directVideoUrl, caption);
+          }
+
+          // Fallback: send thumbnail image if video send failed
+          if (!sent) {
+            const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey);
+            if (thumbBuffer) {
+              const formData = new FormData();
+              formData.append("chat_id", channelId);
+              formData.append("caption", caption);
+              formData.append("parse_mode", "HTML");
+              formData.append("photo", new Blob([thumbBuffer], { type: "image/jpeg" }), "thumbnail.jpg");
+              const uploadRes = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                method: "POST",
+                body: formData,
+              });
+              const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
+              if (uploadData.ok) sent = true;
+              else console.log("Bunny thumbnail upload to Telegram failed:", uploadData.description);
             }
           }
         }
 
-        if (!sentWithPhoto) {
+        if (!sent) {
           await callTelegramSendMessage(token, channelId, caption);
         }
-      } else if (thumbnail && thumbnail.startsWith("http")) {
-        await callTelegramSendPhoto(token, channelId, thumbnail, caption);
+      } else if (ep.videoProvider === "YOUTUBE" || ep.videoProvider === "VIMEO" || ep.videoProvider === "DAILYMOTION") {
+        // For these providers, include the raw video URL in the message text.
+        // Telegram automatically generates a rich video preview card for YouTube, Vimeo, and Dailymotion URLs.
+        await callTelegramSendMessage(token, channelId, messageText);
       } else {
-        await callTelegramSendMessage(token, channelId, caption);
+        // Generic fallback: try thumbnail photo or plain text
+        const storedThumbnail = (ep as any).thumbnailUrl || course.thumbnailUrl;
+        if (storedThumbnail && storedThumbnail.startsWith("http")) {
+          await callTelegramSendPhoto(token, channelId, storedThumbnail, caption);
+        } else {
+          await callTelegramSendMessage(token, channelId, caption);
+        }
       }
 
       res.json({ success: true });
