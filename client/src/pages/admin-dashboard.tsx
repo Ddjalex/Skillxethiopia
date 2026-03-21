@@ -699,9 +699,10 @@ function EditSeasonDialog({ season, courseId }: { season: any; courseId: number 
   );
 }
 
-function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: number }) {
+function EditEpisodeDialog({ episode, courseId, coursePrice }: { episode: any; courseId: number; coursePrice?: string }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [isFree, setIsFree] = useState(episode.price === "0" || episode.price === "0.00");
 
   const updateEpisode = useMutation({
     mutationFn: async (data: any) => {
@@ -729,6 +730,10 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
 
   const editVideoProvider = form.watch("videoProvider");
 
+  const handleSubmit = (data: any) => {
+    updateEpisode.mutate({ ...data, price: isFree ? "0" : (coursePrice || "0") });
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -736,7 +741,7 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
       </DialogTrigger>
       <DialogContent className="max-w-xl">
         <DialogHeader><DialogTitle>Edit Episode</DialogTitle></DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => updateEpisode.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="grid grid-cols-2 gap-4 mt-2">
+        <form onSubmit={form.handleSubmit(handleSubmit, (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="grid grid-cols-2 gap-4 mt-2">
           <div className="space-y-1.5">
             <Label>Title</Label>
             <Input {...form.register("title")} className="h-10" />
@@ -774,7 +779,22 @@ function EditEpisodeDialog({ episode, courseId }: { episode: any; courseId: numb
             <Label>Duration (seconds)</Label>
             <Input type="number" {...form.register("durationSec", { valueAsNumber: true })} className="h-10" />
           </div>
-          <div className="flex items-center gap-2 pt-6">
+          <div className="space-y-1.5">
+            <Label>Access</Label>
+            <div className="flex items-center gap-3 h-10">
+              <button
+                type="button"
+                onClick={() => setIsFree(true)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${isFree ? "bg-green-50 border-green-300 text-green-700" : "border-border text-muted-foreground hover:border-foreground/40"}`}
+              >Free</button>
+              <button
+                type="button"
+                onClick={() => setIsFree(false)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${!isFree ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-foreground/40"}`}
+              >{coursePrice ? `Course Price (${coursePrice} ETB)` : "Paid"}</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 pt-2">
             <input type="checkbox" id="editIsPreview" {...form.register("isPreview")} className="h-4 w-4 rounded border-border" />
             <Label htmlFor="editIsPreview" className="font-normal">Preview Episode</Label>
           </div>
@@ -1281,6 +1301,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
   const [activeTab, setActiveTab] = useState("details");
   const [addingSection, setAddingSection] = useState(false);
   const [addingEpisodeForSeason, setAddingEpisodeForSeason] = useState<number | null>(null);
+  const [newEpisodeIsFree, setNewEpisodeIsFree] = useState(true);
   const [inlineEdit, setInlineEdit] = useState<{ type: "season" | "episode"; id: number; value: string } | null>(null);
   const [broadcastingEpId, setBroadcastingEpId] = useState<number | null>(null);
 
@@ -1334,6 +1355,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] });
       toast({ title: "Episode added" });
       episodeForm.reset({ title: "", episodeNumber: 1, description: "", durationSec: 0, isPreview: false, price: "0", videoProvider: "VIMEO", videoRef: "", seasonId: addingEpisodeForSeason ?? 0 });
+      setNewEpisodeIsFree(true);
       setAddingEpisodeForSeason(null);
     },
     onError: (err: any) => {
@@ -1587,7 +1609,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                         {addingEpisodeForSeason === season.id && (
                           <div className="px-4 py-3 bg-secondary/10 border-b border-border">
                             <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Add Episode to Session {season.seasonNumber}</p>
-                            <form onSubmit={episodeForm.handleSubmit((data) => createEpisode.mutate({ ...data, seasonId: season.id }))} className="grid grid-cols-2 gap-3">
+                            <form onSubmit={episodeForm.handleSubmit((data) => createEpisode.mutate({ ...data, seasonId: season.id, price: newEpisodeIsFree ? "0" : (course.price || "0") }))} className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">Episode Title</Label>
                                 <Input {...episodeForm.register("title")} placeholder="Episode Title" className="h-9 text-sm" />
@@ -1623,8 +1645,11 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                                 <Input type="number" {...episodeForm.register("durationSec", { valueAsNumber: true })} className="h-9 text-sm" />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-xs">Price (ETB)</Label>
-                                <Input {...episodeForm.register("price")} placeholder="0" className="h-9 text-sm" />
+                                <Label className="text-xs">Access</Label>
+                                <div className="flex items-center gap-2 h-9">
+                                  <button type="button" onClick={() => setNewEpisodeIsFree(true)} className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${newEpisodeIsFree ? "bg-green-50 border-green-300 text-green-700" : "border-border text-muted-foreground hover:border-foreground/40"}`}>Free</button>
+                                  <button type="button" onClick={() => setNewEpisodeIsFree(false)} className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${!newEpisodeIsFree ? "bg-primary/10 border-primary/40 text-primary" : "border-border text-muted-foreground hover:border-foreground/40"}`}>{course.price ? `Course (${course.price} ETB)` : "Paid"}</button>
+                                </div>
                               </div>
                               <div className="flex items-center gap-2 pt-5">
                                 <input type="checkbox" id={`isPreview-${season.id}`} {...episodeForm.register("isPreview")} className="h-4 w-4 rounded border-border" />
@@ -1635,7 +1660,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                                 <Textarea {...episodeForm.register("description")} placeholder="Episode description..." rows={2} className="resize-none text-sm" />
                               </div>
                               <div className="col-span-2 flex gap-2 justify-end">
-                                <Button type="button" variant="ghost" size="sm" onClick={() => setAddingEpisodeForSeason(null)}>Cancel</Button>
+                                <Button type="button" variant="ghost" size="sm" onClick={() => { setAddingEpisodeForSeason(null); setNewEpisodeIsFree(true); }}>Cancel</Button>
                                 <Button type="submit" size="sm" disabled={createEpisode.isPending}>
                                   {createEpisode.isPending ? "Adding..." : "Add Episode"}
                                 </Button>
@@ -1649,24 +1674,27 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                             <TableRow className="bg-secondary/10">
                               <TableHead className="w-10 text-xs">#</TableHead>
                               <TableHead className="text-xs">Title</TableHead>
-                              <TableHead className="text-xs">Price</TableHead>
                               <TableHead className="text-right text-xs">Actions</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {season.episodes?.length === 0 && (
                               <TableRow>
-                                <TableCell colSpan={4} className="text-center text-xs text-muted-foreground py-4">No episodes yet — click "+ Episode" to add one.</TableCell>
+                                <TableCell colSpan={3} className="text-center text-xs text-muted-foreground py-4">No episodes yet — click "+ Episode" to add one.</TableCell>
                               </TableRow>
                             )}
                             {season.episodes?.map((ep: any) => (
                               <TableRow key={ep.id} className="hover:bg-secondary/20">
                                 <TableCell className="text-muted-foreground text-xs">{ep.episodeNumber}</TableCell>
                                 <TableCell className="text-sm">
-                                  {ep.title}
-                                  {ep.isPreview && <span className="badge-info ml-2 text-xs">Preview</span>}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {ep.title}
+                                    {ep.isPreview && <span className="badge-info text-xs">Preview</span>}
+                                    {ep.price === "0" || ep.price === "0.00"
+                                      ? <span className="badge-success text-xs">Free</span>
+                                      : <span className="text-xs text-muted-foreground">Course price</span>}
+                                  </div>
                                 </TableCell>
-                                <TableCell><InlinePrice type="episode" id={ep.id} price={ep.price} /></TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-1">
                                     {ep.isPreview && (
@@ -1683,7 +1711,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                                           : <Send className="h-3.5 w-3.5" />}
                                       </Button>
                                     )}
-                                    <EditEpisodeDialog episode={ep} courseId={course.id} />
+                                    <EditEpisodeDialog episode={ep} courseId={course.id} coursePrice={course.price} />
                                     <DeleteConfirmDialog
                                       type="episode"
                                       id={ep.id}
