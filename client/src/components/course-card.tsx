@@ -3,9 +3,10 @@ import { Link } from "wouter";
 import { Course, Category } from "@shared/schema";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface CourseCardProps {
-  course: Course & { category?: Category };
+  course: Course & { category?: Category; avgRating?: number; totalStudents?: number };
   isPurchased?: boolean;
   dark?: boolean;
 }
@@ -13,6 +14,14 @@ interface CourseCardProps {
 export function CourseCard({ course, isPurchased, dark }: CourseCardProps) {
   const href = isPurchased ? `/dashboard/course/${course.id}` : `/course/${course.slug}`;
   const isFree = course.priceStrategy === "FREE";
+  const [imgError, setImgError] = useState(false);
+
+  const avgRating = course.avgRating ?? 0;
+  const totalStudents = course.totalStudents ?? 0;
+
+  const formattedStudents = totalStudents >= 1000
+    ? `${(totalStudents / 1000).toFixed(1)}k`
+    : totalStudents.toString();
 
   return (
     <Link href={href}>
@@ -30,11 +39,12 @@ export function CourseCard({ course, isPurchased, dark }: CourseCardProps) {
 
           {/* Thumbnail */}
           <div className="relative aspect-video overflow-hidden flex-shrink-0 bg-secondary">
-            {course.thumbnailUrl ? (
+            {course.thumbnailUrl && !imgError ? (
               <img
                 src={course.thumbnailUrl}
                 alt={course.title}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={() => setImgError(true)}
               />
             ) : (
               <div className={cn(
@@ -100,11 +110,15 @@ export function CourseCard({ course, isPurchased, dark }: CourseCardProps) {
             )}>
               <div className={cn("flex items-center gap-1", dark ? "text-slate-500" : "text-muted-foreground")}>
                 <Users className="h-3.5 w-3.5" />
-                <span className="text-xs font-medium">1.2k learners</span>
+                <span className="text-xs font-medium" data-testid={`text-students-${course.id}`}>
+                  {totalStudents > 0 ? `${formattedStudents} learners` : "No learners yet"}
+                </span>
               </div>
               <div className="flex items-center gap-1 text-amber-500">
                 <Star className="h-3.5 w-3.5 fill-current" />
-                <span className="text-xs font-semibold">4.9</span>
+                <span className="text-xs font-semibold" data-testid={`text-rating-${course.id}`}>
+                  {avgRating > 0 ? avgRating.toFixed(1) : "—"}
+                </span>
               </div>
             </div>
           </div>

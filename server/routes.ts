@@ -196,16 +196,16 @@ export async function registerRoutes(
   });
 
   app.get(api.public.courses.path, requireAuth, async (req, res) => {
-    const userId = (req.user as any).id;
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
     const search = req.query.search as string;
-    
-    // Only show courses the user has paid for?
-    // User message said "show the course are make payemnt user only"
-    // Usually this means the catalog is restricted.
-    
     const courses = await storage.getCourses(categoryId, search);
-    res.json(courses);
+    const coursesWithStats = await Promise.all(
+      courses.map(async (course) => {
+        const stats = await storage.getCourseStats(course.id);
+        return { ...course, avgRating: stats.avgRating, totalStudents: stats.totalStudents };
+      })
+    );
+    res.json(coursesWithStats);
   });
 
   app.get(api.public.courseDetail.path, requireAuth, async (req, res) => {

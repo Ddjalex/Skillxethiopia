@@ -122,7 +122,11 @@ export const api = {
       path: '/api/courses' as const,
       input: z.object({ categoryId: z.coerce.number().optional(), search: z.string().optional() }).optional(),
       responses: {
-        200: z.array(z.custom<typeof courses.$inferSelect>().and(z.object({ category: z.custom<typeof categories.$inferSelect>().optional() }))),
+        200: z.array(z.custom<typeof courses.$inferSelect>().and(z.object({
+          category: z.custom<typeof categories.$inferSelect>().optional(),
+          avgRating: z.number().optional(),
+          totalStudents: z.number().optional(),
+        }))),
       }
     },
     courseDetail: {
