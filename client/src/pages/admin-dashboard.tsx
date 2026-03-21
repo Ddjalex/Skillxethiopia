@@ -1538,7 +1538,6 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                               <p className="font-semibold text-sm">Session {season.seasonNumber}: {season.title}</p>
                               {season.instructorName && <p className="text-xs text-muted-foreground">BY {season.instructorName}</p>}
                             </div>
-                            <InlinePrice type="season" id={season.id} price={season.price} />
                           </div>
                           <div className="flex gap-1 items-center">
                             <Button
