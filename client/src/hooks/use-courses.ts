@@ -63,6 +63,13 @@ export function useDashboardCourses() {
       if (!res.ok) throw new Error("Failed to fetch dashboard");
       return api.protected.dashboard.responses[200].parse(await res.json());
     },
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      const hasPending = data?.courses?.some((c: any) =>
+        c.seasons?.some((s: any) => s.isPending || s.episodes?.some((e: any) => e.isPending))
+      );
+      return hasPending ? 4000 : false;
+    },
   });
 }
 
@@ -79,6 +86,13 @@ export function useDashboardCourse(id: number) {
       return api.protected.dashboardCourse.responses[200].parse(await res.json());
     },
     enabled: !!user && !!id,
+    refetchInterval: (query) => {
+      const data = query.state.data as any;
+      const hasPending = data?.seasons?.some(
+        (s: any) => s.isPending || s.episodes?.some((e: any) => e.isPending)
+      );
+      return hasPending ? 4000 : false;
+    },
   });
 }
 

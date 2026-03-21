@@ -6,7 +6,8 @@ import { Link, useRoute } from "wouter";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Separator } from "@/components/ui/separator";
 import { PaymentPanel } from "@/components/payment-panel";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardCourse() {
   const [, params] = useRoute("/dashboard/course/:id");
@@ -14,6 +15,35 @@ export default function DashboardCourse() {
 
   const { data, isLoading } = useDashboardCourse(id);
   const buyMutation = useBuyItem();
+  const { toast } = useToast();
+  const prevPendingRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!data?.seasons) return;
+    const currentPending = new Set<string>();
+    const currentUnlocked = new Set<string>();
+
+    data.seasons.forEach((s: any) => {
+      if (s.isPending) currentPending.add(`season-${s.id}`);
+      if (s.isUnlocked) currentUnlocked.add(`season-${s.id}`);
+      s.episodes?.forEach((e: any) => {
+        if (e.isPending) currentPending.add(`episode-${e.id}`);
+        if (e.isUnlocked) currentUnlocked.add(`episode-${e.id}`);
+      });
+    });
+
+    const prev = prevPendingRef.current;
+    const newlyUnlocked = [...prev].filter(key => currentUnlocked.has(key));
+
+    if (newlyUnlocked.length > 0) {
+      toast({
+        title: "Access Granted!",
+        description: `${newlyUnlocked.length === 1 ? "Your purchase" : `${newlyUnlocked.length} purchases`} approved — content is now unlocked.`,
+      });
+    }
+
+    prevPendingRef.current = currentPending;
+  }, [data]);
 
   const [paymentState, setPaymentState] = useState<{
     isOpen: boolean;
