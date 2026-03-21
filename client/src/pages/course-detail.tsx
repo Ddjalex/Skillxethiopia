@@ -2,7 +2,6 @@ import { Navbar } from "@/components/layout-nav";
 import { useCourseDetail, useBuyItem, useDashboardCourse } from "@/hooks/use-courses";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Accordion,
@@ -12,12 +11,12 @@ import {
 } from "@/components/ui/accordion";
 import {
   Loader2, Lock, Play, Clock, CheckCircle, AlertCircle,
-  Users, Star, BookOpen, ChevronRight, GraduationCap,
+  Users, Star, BookOpen, ChevronRight,
   ShieldCheck, Infinity, Smartphone, Trophy, Globe
 } from "lucide-react";
-import { Link, useRoute } from "wouter";
+import { Link, useRoute, useLocation } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -109,6 +108,7 @@ export default function CourseDetailPage() {
   const [, params] = useRoute("/course/:slug");
   const slug = params?.slug || "";
   const { toast } = useToast();
+  const [, navigate] = useLocation();
 
   const { data, isLoading } = useCourseDetail(slug);
   const { user } = useAuth();
@@ -207,7 +207,12 @@ export default function CourseDetailPage() {
     if (!paymentState.itemType || !paymentState.itemId) return;
     buyMutation.mutate(
       { itemType: paymentState.itemType, itemId: paymentState.itemId, amount: paymentState.amount, transactionRef, paymentProofUrl },
-      { onSuccess: () => setPaymentState(prev => ({ ...prev, isOpen: false })) }
+      {
+        onSuccess: () => {
+          setPaymentState(prev => ({ ...prev, isOpen: false }));
+          navigate(`/dashboard/course/${(data as any)?.course?.id}`);
+        }
+      }
     );
   };
 
@@ -632,35 +637,8 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {/* MOBILE sticky bottom CTA */}
-          <div className="xl:hidden fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border p-4 flex items-center gap-3 shadow-lg" data-testid="mobile-cta">
-            {isFree ? (
-              <Button className="flex-1 h-11 font-bold bg-emerald-600 hover:bg-emerald-700">Start Learning Free</Button>
-            ) : ctaPrice ? (
-              <>
-                <div className="flex flex-col leading-none">
-                  <span className="text-lg font-bold">{ctaPrice} ETB</span>
-                </div>
-                <Button
-                  className="flex-1 h-11 font-bold"
-                  onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, firstUnlockedSeason.price)}
-                  disabled={buyMutation.isPending}
-                >
-                  Enroll Now
-                </Button>
-              </>
-            ) : (
-              <Link href="/dashboard" className="flex-1">
-                <Button className="w-full h-11 font-bold bg-emerald-600 hover:bg-emerald-700">Go to My Learning</Button>
-              </Link>
-            )}
-          </div>
-
         </div>
       </div>
-
-      {/* Bottom padding for mobile CTA */}
-      <div className="xl:hidden h-20" />
     </div>
   );
 }
