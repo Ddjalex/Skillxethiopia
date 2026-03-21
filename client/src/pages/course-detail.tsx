@@ -231,8 +231,9 @@ function VideoPreview({ course, onOpen, hasPreview }: { course: any; onOpen?: ()
       <iframe
         src={src}
         className="w-full h-full"
-        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+        allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
+        referrerPolicy="no-referrer"
       />
     );
   }

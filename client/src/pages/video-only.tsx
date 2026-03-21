@@ -54,8 +54,9 @@ export default function VideoOnlyPage() {
           <iframe
             src={data.videoRef.startsWith("http") ? data.videoRef : `https://iframe.mediadelivery.net/embed/${data.videoRef}`}
             className="w-full h-full"
-            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
+            referrerPolicy="no-referrer"
             onError={() => setPlayerError("This Bunny.net video could not be loaded. Please verify the library ID and video ID.")}
           />
         ) : (

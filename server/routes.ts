@@ -118,45 +118,35 @@ async function getBunnyVideoMeta(libraryId: string, videoId: string, apiKey: str
   }
 }
 
-// Fetch Bunny Stream library metadata to get PullZoneName
-async function getBunnyLibraryMeta(libraryId: string, apiKey: string): Promise<any | null> {
-  try {
-    const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}`, {
-      headers: { AccessKey: apiKey },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) {
-      console.log(`Bunny library metadata API returned ${res.status}`);
-      return null;
-    }
-    const data = await res.json() as any;
-    console.log("Bunny library meta — PullZoneName:", data.PullZoneName, "| Name:", data.Name);
-    return data;
-  } catch (err: any) {
-    console.log("Bunny library metadata fetch failed:", err.message);
-    return null;
-  }
+// Extract the pull zone hostname (e.g. "vz-e3f7af2e-928") from any Bunny CDN URL
+function extractBunnyPullZone(url: string | null | undefined): string | null {
+  if (!url) return null;
+  const match = url.match(/https?:\/\/([^.]+)\.b-cdn\.net/);
+  return match ? match[1] : null;
 }
 
-// Download a Bunny Stream video thumbnail via the CDN (using PullZone from metadata)
-async function getBunnyPullZone(libraryId: string, videoId: string, apiKey: string): Promise<{ pullZone: string | null; thumbnailFile: string | null }> {
-  // PullZoneName is a library-level field, not on the video object — fetch both
-  const [libMeta, videoMeta] = await Promise.all([
-    getBunnyLibraryMeta(libraryId, apiKey),
-    getBunnyVideoMeta(libraryId, videoId, apiKey),
-  ]);
-  const pullZone: string | null = libMeta?.PullZoneName ?? libMeta?.pullZoneName ?? null;
+// Download a Bunny Stream video thumbnail via the CDN
+// fallbackCdnUrl is any known Bunny CDN URL we can extract the pull zone from (e.g. course.thumbnailUrl)
+async function getBunnyPullZone(libraryId: string, videoId: string, apiKey: string, fallbackCdnUrl?: string | null): Promise<{ pullZone: string | null; thumbnailFile: string | null }> {
+  const videoMeta = await getBunnyVideoMeta(libraryId, videoId, apiKey);
   const thumbnailFile: string | null = videoMeta?.ThumbnailFileName ?? videoMeta?.thumbnailFileName ?? null;
+
+  // Try to extract pull zone from a known Bunny CDN URL (e.g. the course thumbnail)
+  let pullZone = extractBunnyPullZone(fallbackCdnUrl);
+
+  // Also try extracting from thumbnail if the video meta returned a thumbnail URL
+  if (!pullZone) pullZone = extractBunnyPullZone(videoMeta?.thumbnailUrl ?? videoMeta?.ThumbnailUrl);
+
   console.log("Bunny resolved — PullZone:", pullZone, "| ThumbnailFile:", thumbnailFile);
   return { pullZone, thumbnailFile };
 }
 
-async function downloadBunnyThumbnail(videoRef: string, apiKey: string): Promise<Buffer | null> {
+async function downloadBunnyThumbnail(videoRef: string, apiKey: string, fallbackCdnUrl?: string | null): Promise<Buffer | null> {
   const parts = videoRef.split("/");
   if (parts.length < 2) return null;
   const [libraryId, videoId] = [parts[0], parts[1]];
 
-  const { pullZone, thumbnailFile } = await getBunnyPullZone(libraryId, videoId, apiKey);
+  const { pullZone, thumbnailFile } = await getBunnyPullZone(libraryId, videoId, apiKey, fallbackCdnUrl);
 
   if (pullZone) {
     // Try exact thumbnail filename first, then generic thumbnail.jpg
@@ -223,12 +213,13 @@ async function downloadAndSendBunnyVideoToTelegram(
   token: string,
   channelId: string,
   caption: string,
+  fallbackCdnUrl?: string | null,
 ): Promise<boolean> {
   const parts = videoRef.split("/");
   if (parts.length < 2) return false;
   const [libraryId, videoId] = [parts[0], parts[1]];
 
-  const { pullZone } = await getBunnyPullZone(libraryId, videoId, apiKey);
+  const { pullZone } = await getBunnyPullZone(libraryId, videoId, apiKey, fallbackCdnUrl);
 
   if (!pullZone) {
     console.log("Bunny: no PullZone found in library metadata, cannot build CDN URL");
@@ -1150,12 +1141,13 @@ export async function registerRoutes(
         let sent = false;
 
         if (bunnyApiKey) {
+          const fallbackCdnUrl = course.thumbnailUrl;
           // 1. Try uploading the video binary to Telegram
-          sent = await downloadAndSendBunnyVideoToTelegram(ep.videoRef, bunnyApiKey, token, channelId, caption);
+          sent = await downloadAndSendBunnyVideoToTelegram(ep.videoRef, bunnyApiKey, token, channelId, caption, fallbackCdnUrl);
 
           // 2. If video failed, try sending the thumbnail image
           if (!sent) {
-            const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey);
+            const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey, fallbackCdnUrl);
             if (thumbBuffer) {
               const formData = new FormData();
               formData.append("chat_id", channelId);

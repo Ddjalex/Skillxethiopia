@@ -95,8 +95,9 @@ export default function EpisodePlayer() {
                 <iframe
                   src={buildBunnyUrl(streamData.videoRef)}
                   className="absolute inset-0 w-full h-full"
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
                   allowFullScreen
+                  referrerPolicy="no-referrer"
                   onError={() => setPlayerError("Failed to load Bunny.net video.")}
                 />
               ) : (

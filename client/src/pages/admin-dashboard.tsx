@@ -998,8 +998,9 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                                   <iframe
                                     src={ep.videoRef.startsWith("http") ? ep.videoRef : `https://iframe.mediadelivery.net/embed/${ep.videoRef}`}
                                     className="w-full h-full"
-                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                                    allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
                                     allowFullScreen
+                                    referrerPolicy="no-referrer"
                                   />
                                 ) : (
                                   <ReactPlayer
