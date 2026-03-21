@@ -1212,9 +1212,6 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
-                    <CourseContentDialog courseId={course.id} />
-                    <AddSeasonDialog courseId={course.id} />
-                    <AddEpisodeDialog courseId={course.id} seasons={undefined} />
                     <EditCourseDialog course={course} categories={categories} />
                     <DeleteConfirmDialog
                       type="course"
