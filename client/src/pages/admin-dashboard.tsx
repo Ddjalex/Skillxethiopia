@@ -1023,96 +1023,100 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
             <DialogTrigger asChild>
               <Button size="sm" className="gap-2"><Plus className="h-4 w-4" /> Add Course</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
+            <DialogContent className="max-w-2xl flex flex-col max-h-[90vh] p-0 gap-0">
+              <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
                 <DialogTitle>Add New Course</DialogTitle>
-                <DialogDescription>Create a new course for your students.</DialogDescription>
-              </DialogHeader>
-              <form onSubmit={form.handleSubmit((data) => createCourse.mutate(data))} className="grid grid-cols-2 gap-4 mt-2">
-                <div className="space-y-1.5">
-                  <Label>Title</Label>
-                  <Input {...form.register("title")} placeholder="Course Title" className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Slug</Label>
-                  <Input {...form.register("slug")} placeholder="course-slug" className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Instructor Name</Label>
-                  <Input {...form.register("instructorName")} placeholder="Instructor Name" className="h-10" />
-                </div>
-                <div className="space-y-2 col-span-2">
-                  <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                  <InstructorImageUpload
-                    value={form.watch("instructorImageUrl") || ""}
-                    onChange={(url) => form.setValue("instructorImageUrl", url)}
-                  />
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                  <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Category</Label>
-                  <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))}>
-                    <SelectTrigger className="h-10"><SelectValue placeholder="Select Category" /></SelectTrigger>
-                    <SelectContent>
-                      {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Price Strategy</Label>
-                  <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue="PAID">
-                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="FREE">Free</SelectItem>
-                      <SelectItem value="PAID">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {watchedPriceStrategy === "PAID" && (
-                  <div className="space-y-1.5">
-                    <Label>Price (ETB)</Label>
-                    <Input {...form.register("price")} placeholder="e.g. 500" className="h-10" />
+                <DialogDescription className="mt-1">Create a new course for your students.</DialogDescription>
+              </div>
+              <form onSubmit={form.handleSubmit((data) => createCourse.mutate(data))} className="flex flex-col flex-1 min-h-0">
+                <div className="overflow-y-auto flex-1 px-6 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label>Title</Label>
+                      <Input {...form.register("title")} placeholder="Course Title" className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Slug</Label>
+                      <Input {...form.register("slug")} placeholder="course-slug" className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Instructor Name</Label>
+                      <Input {...form.register("instructorName")} placeholder="Instructor Name" className="h-10" />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      <InstructorImageUpload
+                        value={form.watch("instructorImageUrl") || ""}
+                        onChange={(url) => form.setValue("instructorImageUrl", url)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Category</Label>
+                      <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))}>
+                        <SelectTrigger className="h-10"><SelectValue placeholder="Select Category" /></SelectTrigger>
+                        <SelectContent>
+                          {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Price Strategy</Label>
+                      <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue="PAID">
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FREE">Free</SelectItem>
+                          <SelectItem value="PAID">Paid</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {watchedPriceStrategy === "PAID" && (
+                      <div className="space-y-1.5">
+                        <Label>Price (ETB)</Label>
+                        <Input {...form.register("price")} placeholder="e.g. 500" className="h-10" />
+                      </div>
+                    )}
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Thumbnail URL</Label>
+                      <Input {...form.register("thumbnailUrl")} placeholder="https://..." className="h-10" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Intro Video Provider</Label>
+                      <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue="BUNNY">
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                          <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                          <SelectItem value="VIMEO">Vimeo</SelectItem>
+                          <SelectItem value="URL">Direct URL</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                      {watchedIntroVideoProvider === "BUNNY" ? (
+                        <BunnyVideoRefInput
+                          value={form.watch("introVideoRef") || ""}
+                          onChange={(v) => form.setValue("introVideoRef", v)}
+                        />
+                      ) : (
+                        <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+                      )}
+                    </div>
+                    <div className="space-y-1.5 col-span-2">
+                      <Label>Description</Label>
+                      <Textarea {...form.register("description")} placeholder="Describe the course..." rows={3} className="resize-none" />
+                    </div>
                   </div>
-                )}
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Thumbnail URL</Label>
-                  <Input {...form.register("thumbnailUrl")} placeholder="https://..." className="h-10" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Intro Video Provider</Label>
-                  <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue="BUNNY">
-                    <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BUNNY">Bunny.net</SelectItem>
-                      <SelectItem value="YOUTUBE">YouTube</SelectItem>
-                      <SelectItem value="VIMEO">Vimeo</SelectItem>
-                      <SelectItem value="URL">Direct URL</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                  {watchedIntroVideoProvider === "BUNNY" ? (
-                    <BunnyVideoRefInput
-                      value={form.watch("introVideoRef") || ""}
-                      onChange={(v) => form.setValue("introVideoRef", v)}
-                    />
-                  ) : (
-                    <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
-                  )}
-                </div>
-                <div className="space-y-1.5 col-span-2">
-                  <Label>Description</Label>
-                  <Textarea {...form.register("description")} placeholder="Describe the course..." rows={3} className="resize-none" />
-                </div>
-                <DialogFooter className="col-span-2">
+                <div className="px-6 py-4 border-t border-border flex-shrink-0 flex justify-end">
                   <Button type="submit" disabled={createCourse.isPending}>
                     {createCourse.isPending ? "Creating..." : "Create Course"}
                   </Button>
-                </DialogFooter>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
@@ -1271,93 +1275,99 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       <DialogTrigger asChild>
         <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-3.5 w-3.5" /></Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Edit Course</DialogTitle></DialogHeader>
-        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="grid grid-cols-2 gap-4 mt-2">
-          <div className="space-y-1.5">
-            <Label>Title</Label>
-            <Input {...form.register("title")} className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Slug</Label>
-            <Input {...form.register("slug")} className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Instructor Name</Label>
-            <Input {...form.register("instructorName")} className="h-10" />
-          </div>
-          <div className="space-y-2 col-span-2">
-            <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-            <InstructorImageUpload
-              value={form.watch("instructorImageUrl") || ""}
-              onChange={(url) => form.setValue("instructorImageUrl", url)}
-            />
-          </div>
-          <div className="space-y-1.5 col-span-2">
-            <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-            <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Category</Label>
-            <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))} defaultValue={course.categoryId.toString()}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Price Strategy</Label>
-            <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue={course.priceStrategy || "PAID"}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="FREE">Free</SelectItem>
-                <SelectItem value="PAID">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {editWatchedPriceStrategy === "PAID" && (
-            <div className="space-y-1.5">
-              <Label>Price (ETB)</Label>
-              <Input {...form.register("price")} className="h-10" />
+      <DialogContent className="max-w-2xl flex flex-col max-h-[90vh] p-0 gap-0">
+        <div className="px-6 pt-6 pb-4 border-b border-border flex-shrink-0">
+          <DialogTitle>Edit Course</DialogTitle>
+        </div>
+        <form onSubmit={form.handleSubmit((data) => updateCourse.mutate(data), (errs) => { toast({ title: "Check required fields", description: Object.keys(errs).join(", "), variant: "destructive" }); })} className="flex flex-col flex-1 min-h-0">
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Title</Label>
+                <Input {...form.register("title")} className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Slug</Label>
+                <Input {...form.register("slug")} className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Instructor Name</Label>
+                <Input {...form.register("instructorName")} className="h-10" />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <InstructorImageUpload
+                  value={form.watch("instructorImageUrl") || ""}
+                  onChange={(url) => form.setValue("instructorImageUrl", url)}
+                />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                <Textarea {...form.register("instructorBio")} placeholder="Short bio about the instructor..." rows={2} className="resize-none" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Category</Label>
+                <Select onValueChange={(v) => form.setValue("categoryId", parseInt(v))} defaultValue={course.categoryId.toString()}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Price Strategy</Label>
+                <Select onValueChange={(v) => form.setValue("priceStrategy", v)} defaultValue={course.priceStrategy || "PAID"}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FREE">Free</SelectItem>
+                    <SelectItem value="PAID">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {editWatchedPriceStrategy === "PAID" && (
+                <div className="space-y-1.5">
+                  <Label>Price (ETB)</Label>
+                  <Input {...form.register("price")} className="h-10" />
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>Thumbnail URL</Label>
+                <Input {...form.register("thumbnailUrl")} className="h-10" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Intro Video Provider</Label>
+                <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue={course.introVideoProvider || "BUNNY"}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="BUNNY">Bunny.net</SelectItem>
+                    <SelectItem value="YOUTUBE">YouTube</SelectItem>
+                    <SelectItem value="VIMEO">Vimeo</SelectItem>
+                    <SelectItem value="URL">Direct URL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
+                {editIntroVideoProvider === "BUNNY" ? (
+                  <BunnyVideoRefInput
+                    value={form.watch("introVideoRef") || ""}
+                    onChange={(v) => form.setValue("introVideoRef", v)}
+                  />
+                ) : (
+                  <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
+                )}
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Description</Label>
+                <Textarea {...form.register("description")} rows={3} className="resize-none" />
+              </div>
             </div>
-          )}
-          <div className="space-y-1.5">
-            <Label>Thumbnail URL</Label>
-            <Input {...form.register("thumbnailUrl")} className="h-10" />
           </div>
-          <div className="space-y-1.5">
-            <Label>Intro Video Provider</Label>
-            <Select onValueChange={(v) => form.setValue("introVideoProvider", v)} defaultValue={course.introVideoProvider || "BUNNY"}>
-              <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="BUNNY">Bunny.net</SelectItem>
-                <SelectItem value="YOUTUBE">YouTube</SelectItem>
-                <SelectItem value="VIMEO">Vimeo</SelectItem>
-                <SelectItem value="URL">Direct URL</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5 col-span-2">
-            <Label>Intro Video Ref <span className="text-muted-foreground font-normal text-xs">(optional — leave blank to show thumbnail)</span></Label>
-            {editIntroVideoProvider === "BUNNY" ? (
-              <BunnyVideoRefInput
-                value={form.watch("introVideoRef") || ""}
-                onChange={(v) => form.setValue("introVideoRef", v)}
-              />
-            ) : (
-              <Input {...form.register("introVideoRef")} placeholder="ID or URL" className="h-10" />
-            )}
-          </div>
-          <div className="space-y-1.5 col-span-2">
-            <Label>Description</Label>
-            <Textarea {...form.register("description")} rows={3} className="resize-none" />
-          </div>
-          <DialogFooter className="col-span-2">
+          <div className="px-6 py-4 border-t border-border flex-shrink-0 flex justify-end">
             <Button type="submit" disabled={updateCourse.isPending}>
               {updateCourse.isPending ? "Saving..." : "Save Changes"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
