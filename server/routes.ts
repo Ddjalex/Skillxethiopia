@@ -7,7 +7,8 @@ import {
   type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
-  type AccessGrant, type InsertAccessGrant
+  type AccessGrant, type InsertAccessGrant,
+  insertCourseRatingSchema
 } from "@shared/schema";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
@@ -16,6 +17,10 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import { hash, compare } from "bcrypt";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import express from "express";
 
 async function getTelegramCredentials() {
   const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
@@ -66,10 +71,32 @@ declare global {
 
 type UserSchema = import("@shared/schema").User;
 
+// Multer file upload setup
+const uploadsDir = path.resolve(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, uploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname);
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files allowed"));
+  },
+});
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // Serve uploaded files
+  app.use("/uploads", express.static(uploadsDir));
 
   // Auth setup
   app.use(session({
@@ -185,9 +212,12 @@ export async function registerRoutes(
     const course = await storage.getCourseBySlug(req.params.slug);
     if (!course) return res.status(404).json({ message: "Course not found" });
     
-    const category = await storage.getCategory(course.categoryId);
-    const seasons = await storage.getSeasonsByCourse(course.id);
-    const seasonsWithEpisodes = await Promise.all(seasons.map(async s => {
+    const [category, courseStats] = await Promise.all([
+      storage.getCategory(course.categoryId),
+      storage.getCourseStats(course.id),
+    ]);
+    const allSeasons = await storage.getSeasonsByCourse(course.id);
+    const seasonsWithEpisodes = await Promise.all(allSeasons.map(async s => {
       const eps = await storage.getEpisodesBySeason(s.id);
       return {
         ...s,
@@ -198,8 +228,21 @@ export async function registerRoutes(
         }))
       };
     }));
+
+    // Include user's existing rating if logged in
+    const userId = req.isAuthenticated() ? (req.user as any).id : null;
+    const userRating = userId ? await storage.getCourseRating(userId, course.id) : null;
     
-    res.json({ course, category, seasons: seasonsWithEpisodes });
+    res.json({
+      course: {
+        ...course,
+        avgRating: courseStats.avgRating,
+        totalStudents: courseStats.totalStudents,
+      },
+      category,
+      seasons: seasonsWithEpisodes,
+      userRating: userRating?.rating || null,
+    });
   });
 
   // --- Protected Routes ---
@@ -316,6 +359,55 @@ export async function registerRoutes(
     }
   });
 
+  // Course rating submission
+  app.post("/api/courses/:id/rate", requireAuth, async (req, res) => {
+    try {
+      const courseId = Number(req.params.id);
+      const userId = (req.user as any).id;
+      const { rating } = insertCourseRatingSchema.parse({ courseId, rating: Number(req.body.rating) });
+
+      // Verify user has at least one paid purchase for this course
+      const courseSeasons = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.courseId, courseId));
+      const seasonIds = courseSeasons.map(s => s.id);
+      let hasPurchase = false;
+      if (seasonIds.length > 0) {
+        const { sql: sqlFn } = await import("drizzle-orm");
+        const paid = await db.select().from(purchases).where(
+          and(
+            eq(purchases.userId, userId),
+            eq(purchases.status, "PAID")
+          )
+        ).limit(50);
+        // Check if any paid purchase is for this course's seasons/episodes
+        const courseEpisodes = await db.select({ id: episodes.id }).from(episodes)
+          .where(sqlFn`${episodes.seasonId} = ANY(ARRAY[${sqlFn.raw(seasonIds.join(','))}]::int[])`);
+        const episodeIds = new Set(courseEpisodes.map(e => e.id));
+        const seasonIdSet = new Set(seasonIds);
+        hasPurchase = paid.some(p =>
+          (p.itemType === "SEASON" && seasonIdSet.has(p.itemId)) ||
+          (p.itemType === "EPISODE" && episodeIds.has(p.itemId))
+        );
+      }
+
+      if (!hasPurchase) {
+        return res.status(403).json({ message: "You must purchase this course to rate it" });
+      }
+
+      const result = await storage.upsertCourseRating(userId, courseId, rating);
+      res.json(result);
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Invalid rating" });
+    }
+  });
+
+  // Get user's rating for a course
+  app.get("/api/courses/:id/my-rating", requireAuth, async (req, res) => {
+    const courseId = Number(req.params.id);
+    const userId = (req.user as any).id;
+    const rating = await storage.getCourseRating(userId, courseId);
+    res.json({ rating: rating?.rating || null });
+  });
+
   app.get(api.protected.stream.path, async (req, res) => {
     const episodeId = Number(req.params.id);
     const episode = await storage.getEpisode(episodeId);
@@ -395,6 +487,13 @@ export async function registerRoutes(
     const user = await storage.updateUserRole(Number(req.params.id), role);
     const { passwordHash: _, ...safe } = user;
     res.json(safe);
+  });
+
+  // File upload endpoint
+  app.post("/api/admin/upload", requireAdmin, upload.single("file"), (req: any, res: any) => {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
   });
 
   app.post("/api/admin/change-password", requireAdmin, async (req, res) => {

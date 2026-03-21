@@ -1,14 +1,15 @@
 import { db } from "./db";
 import {
-  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts, appSettings,
+  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts, appSettings, courseRatings,
   type User, type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
   type AccessGrant, type InsertAccessGrant,
   type PaymentOption, type InsertPaymentOption,
-  type Broadcast, type InsertBroadcast
+  type Broadcast, type InsertBroadcast,
+  type CourseRating
 } from "@shared/schema";
-import { eq, or, and, ilike } from "drizzle-orm";
+import { eq, or, and, ilike, avg, count, sql } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -76,6 +77,11 @@ export interface IStorage {
   updateBroadcast(id: number, broadcast: Partial<InsertBroadcast>): Promise<Broadcast>;
   deleteBroadcast(id: number): Promise<void>;
   deactivateAllBroadcasts(): Promise<void>;
+
+  // Course Ratings
+  getCourseRating(userId: number, courseId: number): Promise<CourseRating | undefined>;
+  upsertCourseRating(userId: number, courseId: number, rating: number): Promise<CourseRating>;
+  getCourseStats(courseId: number): Promise<{ avgRating: number; totalStudents: number }>;
 
   // App Settings
   getSetting(key: string): Promise<string | undefined>;
@@ -273,6 +279,50 @@ export class DatabaseStorage implements IStorage {
   }
   async deactivateAllBroadcasts(): Promise<void> {
     await db.update(broadcasts).set({ isActive: false });
+  }
+
+  // Course Ratings
+  async getCourseRating(userId: number, courseId: number): Promise<CourseRating | undefined> {
+    const [row] = await db.select().from(courseRatings)
+      .where(and(eq(courseRatings.userId, userId), eq(courseRatings.courseId, courseId)));
+    return row;
+  }
+  async upsertCourseRating(userId: number, courseId: number, rating: number): Promise<CourseRating> {
+    const [row] = await db.insert(courseRatings)
+      .values({ userId, courseId, rating })
+      .onConflictDoUpdate({ target: [courseRatings.userId, courseRatings.courseId], set: { rating } })
+      .returning();
+    return row;
+  }
+  async getCourseStats(courseId: number): Promise<{ avgRating: number; totalStudents: number }> {
+    // Avg rating from courseRatings
+    const [ratingRow] = await db.select({ avg: avg(courseRatings.rating) })
+      .from(courseRatings)
+      .where(eq(courseRatings.courseId, courseId));
+    const avgRating = ratingRow?.avg ? parseFloat(ratingRow.avg) : 0;
+
+    // Total students = distinct users with PAID purchase for any season/episode in this course
+    const courseSeasons = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.courseId, courseId));
+    const seasonIds = courseSeasons.map(s => s.id);
+
+    let totalStudents = 0;
+    if (seasonIds.length > 0) {
+      const courseEpisodes = await db.select({ id: episodes.id }).from(episodes)
+        .where(sql`${episodes.seasonId} = ANY(ARRAY[${sql.raw(seasonIds.join(','))}]::int[])`);
+      const episodeIds = courseEpisodes.map(e => e.id);
+
+      const allItemIds = [...seasonIds, ...episodeIds];
+      if (allItemIds.length > 0) {
+        const result = await db.execute(sql`
+          SELECT COUNT(DISTINCT user_id) as cnt FROM purchases
+          WHERE status = 'PAID'
+          AND item_id = ANY(ARRAY[${sql.raw(allItemIds.join(','))}]::int[])
+        `);
+        totalStudents = parseInt((result.rows[0] as any)?.cnt || '0', 10);
+      }
+    }
+
+    return { avgRating, totalStudents };
   }
 
   // App Settings

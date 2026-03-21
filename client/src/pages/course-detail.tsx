@@ -17,18 +17,20 @@ import {
 import { Link, useRoute } from "wouter";
 import { PaymentPanel } from "@/components/payment-panel";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
-function StarRating({ rating }: { rating: string | null | undefined }) {
-  const val = parseFloat(rating || "0");
-  if (!val) return null;
-  const full = Math.floor(val);
-  const half = val - full >= 0.5;
+function StarRating({ rating, size = "md" }: { rating: number; size?: "sm" | "md" }) {
+  const full = Math.floor(rating);
+  const half = rating - full >= 0.5;
+  const sz = size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map(i => (
         <Star
           key={i}
-          className={`w-4 h-4 ${
+          className={`${sz} ${
             i <= full
               ? "fill-amber-400 text-amber-400"
               : i === full + 1 && half
@@ -41,9 +43,31 @@ function StarRating({ rating }: { rating: string | null | undefined }) {
   );
 }
 
+function InteractiveStarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hovered, setHovered] = useState(0);
+  const display = hovered || value;
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map(i => (
+        <button
+          key={i}
+          type="button"
+          onMouseEnter={() => setHovered(i)}
+          onMouseLeave={() => setHovered(0)}
+          onClick={() => onChange(i)}
+          className="focus:outline-none"
+        >
+          <Star className={`w-7 h-7 transition-colors ${i <= display ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30 hover:text-amber-300"}`} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function CourseDetailPage() {
   const [, params] = useRoute("/course/:slug");
   const slug = params?.slug || "";
+  const { toast } = useToast();
 
   const { data, isLoading } = useCourseDetail(slug);
   const { user } = useAuth();
@@ -56,6 +80,22 @@ export default function CourseDetailPage() {
     itemId: number | null;
     amount: string;
   }>({ isOpen: false, itemType: null, itemId: null, amount: "" });
+
+  const [userRatingVal, setUserRatingVal] = useState<number>(0);
+  const [ratingInitialized, setRatingInitialized] = useState(false);
+
+  const rateMutation = useMutation({
+    mutationFn: async ({ courseId, rating }: { courseId: number; rating: number }) => {
+      return apiRequest("POST", `/api/courses/${courseId}/rate`, { rating });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/course", slug] });
+      toast({ title: "Rating submitted", description: "Thank you for rating this course!" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Cannot rate", description: err.message || "You must purchase this course first.", variant: "destructive" });
+    }
+  });
 
   if (isLoading) {
     return (
@@ -85,28 +125,37 @@ export default function CourseDetailPage() {
     );
   }
 
-  const { course, seasons, category } = data;
+  const { course, seasons, category, userRating } = data as any;
   const courseAny = course as any;
 
-  const enrichedSeasons = seasons.map(s => {
-    const dashboardSeason = dashboardData?.seasons.find(ds => ds.id === s.id);
+  // Initialize rating from API response
+  if (!ratingInitialized && userRating) {
+    setUserRatingVal(userRating);
+    setRatingInitialized(true);
+  }
+
+  const enrichedSeasons = seasons.map((s: any) => {
+    const dashboardSeason = dashboardData?.seasons.find((ds: any) => ds.id === s.id);
     return {
       ...s,
       isUnlocked: dashboardSeason?.isUnlocked || false,
       isPending: dashboardSeason?.isPending || false,
-      episodes: s.episodes.map(e => {
-        const dashboardEp = dashboardSeason?.episodes.find(de => de.id === e.id);
+      episodes: s.episodes.map((e: any) => {
+        const dashboardEp = dashboardSeason?.episodes.find((de: any) => de.id === e.id);
         return { ...e, isUnlocked: dashboardEp?.isUnlocked || false, isPending: dashboardEp?.isPending || false };
       })
     };
   });
 
-  const totalEpisodes = enrichedSeasons.reduce((acc, s) => acc + s.episodes.length, 0);
+  const totalEpisodes = enrichedSeasons.reduce((acc: number, s: any) => acc + s.episodes.length, 0);
   const isFree = course?.priceStrategy === "FREE";
-  const ratingVal = parseFloat(courseAny.rating || "0");
-  const hasRating = ratingVal > 0;
-  const totalStudents = courseAny.totalStudents || 0;
+  const avgRating: number = courseAny.avgRating || 0;
+  const totalStudents: number = courseAny.totalStudents || 0;
+  const hasRating = avgRating > 0;
   const hasInstructor = !!(courseAny.instructorImageUrl || courseAny.instructorBio);
+
+  // Check if user has any unlocked content (has purchased something)
+  const hasPurchasedAnything = enrichedSeasons.some((s: any) => s.isUnlocked || s.episodes.some((e: any) => e.isUnlocked));
 
   const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
     if (!user) { window.location.href = "/auth"; return; }
@@ -138,7 +187,6 @@ export default function CourseDetailPage() {
       {/* Breadcrumb + Hero */}
       <div className="mt-16 border-b border-border bg-card">
         <div className="container mx-auto px-4 lg:px-6">
-          {/* Breadcrumb */}
           <nav className="flex items-center gap-1.5 py-4 text-xs text-muted-foreground">
             <Link href="/" className="hover:text-foreground transition-colors">Home</Link>
             <ChevronRight className="h-3 w-3" />
@@ -155,7 +203,6 @@ export default function CourseDetailPage() {
             <span className="text-foreground font-medium truncate max-w-[150px]">{course.title}</span>
           </nav>
 
-          {/* Hero */}
           <div className="py-8 flex flex-col lg:flex-row gap-8 items-start">
             <div className="flex-1 space-y-5">
               <div className="flex flex-wrap items-center gap-2">
@@ -181,21 +228,17 @@ export default function CourseDetailPage() {
                 {totalStudents > 0 && (
                   <span className="flex items-center gap-1.5">
                     <Users className="w-4 h-4" />
-                    {totalStudents >= 1000
-                      ? `${(totalStudents / 1000).toFixed(1)}k`
-                      : totalStudents} learners
+                    {totalStudents >= 1000 ? `${(totalStudents / 1000).toFixed(1)}k` : totalStudents} learners
                   </span>
                 )}
                 {hasRating && (
                   <span className="flex items-center gap-2">
-                    <StarRating rating={courseAny.rating} />
-                    <span className="font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                    <StarRating rating={avgRating} />
+                    <span className="font-semibold text-amber-600">{avgRating.toFixed(1)}</span>
                   </span>
                 )}
                 <Separator orientation="vertical" className="h-4" />
-                <span>
-                  By <span className="text-foreground font-semibold">{course.instructorName}</span>
-                </span>
+                <span>By <span className="text-foreground font-semibold">{course.instructorName}</span></span>
               </div>
             </div>
 
@@ -207,17 +250,11 @@ export default function CourseDetailPage() {
                     <iframe
                       src={
                         course.introVideoProvider === "BUNNY"
-                          ? (course.introVideoRef.startsWith("http")
-                              ? course.introVideoRef
-                              : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
+                          ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
                           : course.introVideoProvider === "YOUTUBE"
-                            ? (course.introVideoRef.startsWith("http")
-                                ? course.introVideoRef
-                                : `https://www.youtube.com/embed/${course.introVideoRef}`)
+                            ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://www.youtube.com/embed/${course.introVideoRef}`)
                           : course.introVideoProvider === "VIMEO"
-                            ? (course.introVideoRef.startsWith("http")
-                                ? course.introVideoRef
-                                : `https://player.vimeo.com/video/${course.introVideoRef}`)
+                            ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://player.vimeo.com/video/${course.introVideoRef}`)
                           : course.introVideoRef
                       }
                       className="w-full h-full"
@@ -241,17 +278,13 @@ export default function CourseDetailPage() {
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-xl font-bold">
-                      {isFree ? "Free" : "Premium Content"}
-                    </span>
-                    {isFree && (
-                      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold">FREE</Badge>
-                    )}
+                    <span className="text-xl font-bold">{isFree ? "Free" : "Premium Content"}</span>
+                    {isFree && <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-semibold">FREE</Badge>}
                   </div>
                   {hasRating && (
                     <div className="flex items-center gap-2">
-                      <StarRating rating={courseAny.rating} />
-                      <span className="text-sm font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                      <StarRating rating={avgRating} size="sm" />
+                      <span className="text-sm font-semibold text-amber-600">{avgRating.toFixed(1)}</span>
                       {totalStudents > 0 && (
                         <span className="text-xs text-muted-foreground">
                           ({totalStudents >= 1000 ? `${(totalStudents / 1000).toFixed(1)}k` : totalStudents} learners)
@@ -268,9 +301,7 @@ export default function CourseDetailPage() {
                       <p className="text-xs text-muted-foreground text-center border border-dashed border-border rounded-lg py-3 px-2">
                         Purchase individual seasons or episodes below
                       </p>
-                      <p className="text-xs text-center text-muted-foreground">
-                        30-Day Money-Back Guarantee
-                      </p>
+                      <p className="text-xs text-center text-muted-foreground">30-Day Money-Back Guarantee</p>
                     </>
                   )}
                 </div>
@@ -296,7 +327,7 @@ export default function CourseDetailPage() {
           </div>
 
           <Accordion type="single" collapsible className="space-y-3">
-            {enrichedSeasons.map((season) => (
+            {enrichedSeasons.map((season: any) => (
               <AccordionItem
                 key={season.id}
                 value={`season-${season.id}`}
@@ -309,38 +340,25 @@ export default function CourseDetailPage() {
                         {season.seasonNumber}
                       </div>
                       <div className="min-w-0 text-left">
-                        <span className="font-semibold text-sm block truncate">
-                          {season.title}
-                        </span>
+                        <span className="font-semibold text-sm block truncate">{season.title}</span>
                         {season.instructorName && (
-                          <span className="text-xs text-muted-foreground">
-                            By {season.instructorName}
-                          </span>
+                          <span className="text-xs text-muted-foreground">By {season.instructorName}</span>
                         )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
                       {isFree ? (
-                        <span className="badge-success">
-                          <CheckCircle className="w-3 h-3" /> Free
-                        </span>
+                        <span className="badge-success"><CheckCircle className="w-3 h-3" /> Free</span>
                       ) : season.isUnlocked ? (
-                        <span className="badge-success">
-                          <CheckCircle className="w-3 h-3" /> Unlocked
-                        </span>
+                        <span className="badge-success"><CheckCircle className="w-3 h-3" /> Unlocked</span>
                       ) : season.isPending ? (
-                        <span className="badge-warning">
-                          <AlertCircle className="w-3 h-3" /> Pending
-                        </span>
+                        <span className="badge-warning"><AlertCircle className="w-3 h-3" /> Pending</span>
                       ) : (
                         <Button
                           size="sm"
                           className="h-7 text-xs px-3 rounded-lg"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBuyInitiate("SEASON", season.id, season.price);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); handleBuyInitiate("SEASON", season.id, season.price); }}
                           disabled={buyMutation.isPending}
                         >
                           {season.price} ETB
@@ -352,11 +370,8 @@ export default function CourseDetailPage() {
                 <AccordionContent className="px-5 pb-4 pt-1">
                   <Separator className="mb-3" />
                   <div className="space-y-1.5">
-                    {season.episodes.map((ep) => (
-                      <div
-                        key={ep.id}
-                        className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/60 transition-colors"
-                      >
+                    {season.episodes.map((ep: any) => (
+                      <div key={ep.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/60 transition-colors">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="h-7 w-7 rounded-full bg-secondary border border-border flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
                             {ep.episodeNumber}
@@ -364,18 +379,13 @@ export default function CourseDetailPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate flex items-center gap-1.5">
                               {ep.title}
-                              {ep.isPreview && (
-                                <span className="badge-info text-[10px]">Preview</span>
-                              )}
+                              {ep.isPreview && <span className="badge-info text-[10px]">Preview</span>}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {ep.durationSec >= 60
-                                ? `${Math.floor(ep.durationSec / 60)} min`
-                                : `${ep.durationSec} sec`}
+                              {ep.durationSec >= 60 ? `${Math.floor(ep.durationSec / 60)} min` : `${ep.durationSec} sec`}
                             </p>
                           </div>
                         </div>
-
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           {isFree || ep.isUnlocked || ep.isPreview ? (
                             <Link href={ep.isPreview && !ep.isUnlocked ? `/video/${ep.id}` : `/dashboard/course/${course.id}/episode/${ep.id}`}>
@@ -385,9 +395,7 @@ export default function CourseDetailPage() {
                               </Button>
                             </Link>
                           ) : ep.isPending ? (
-                            <span className="badge-warning text-[10px]">
-                              <AlertCircle className="w-3 h-3" /> Pending
-                            </span>
+                            <span className="badge-warning text-[10px]"><AlertCircle className="w-3 h-3" /> Pending</span>
                           ) : (
                             <Button
                               size="sm"
@@ -408,6 +416,37 @@ export default function CourseDetailPage() {
             ))}
           </Accordion>
         </div>
+
+        {/* Rate this course — only for students who have purchased */}
+        {user && hasPurchasedAnything && (
+          <div className="max-w-3xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-9 w-9 rounded-lg bg-amber-50 flex items-center justify-center">
+                <Star className="h-4 w-4 text-amber-500" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Rate this Course</h2>
+                <p className="text-xs text-muted-foreground">
+                  {userRatingVal ? "You've already rated this course — you can update your rating." : "Share your experience with other learners."}
+                </p>
+              </div>
+            </div>
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <InteractiveStarRating value={userRatingVal} onChange={setUserRatingVal} />
+                <Button
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={!userRatingVal || rateMutation.isPending}
+                  onClick={() => rateMutation.mutate({ courseId: course.id, rating: userRatingVal })}
+                >
+                  {rateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Star className="w-3.5 h-3.5 fill-current" />}
+                  {userRatingVal ? `Submit ${userRatingVal}-star rating` : "Select a rating"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Instructor Section */}
         {hasInstructor && (
@@ -439,25 +478,19 @@ export default function CourseDetailPage() {
                   <h3 className="text-base font-bold">{course.instructorName}</h3>
                   {hasRating && (
                     <div className="flex items-center gap-1.5 mt-1">
-                      <StarRating rating={courseAny.rating} />
-                      <span className="text-sm font-semibold text-amber-600">{ratingVal.toFixed(1)}</span>
+                      <StarRating rating={avgRating} size="sm" />
+                      <span className="text-sm font-semibold text-amber-600">{avgRating.toFixed(1)}</span>
                       <span className="text-xs text-muted-foreground">Instructor Rating</span>
                     </div>
                   )}
                   {totalStudents > 0 && (
                     <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
                       <Users className="w-3.5 h-3.5" />
-                      <span>
-                        {totalStudents >= 1000
-                          ? `${(totalStudents / 1000).toFixed(1)}k`
-                          : totalStudents} Students
-                      </span>
+                      <span>{totalStudents >= 1000 ? `${(totalStudents / 1000).toFixed(1)}k` : totalStudents} Students</span>
                     </div>
                   )}
                   {courseAny.instructorBio && (
-                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-                      {courseAny.instructorBio}
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{courseAny.instructorBio}</p>
                   )}
                 </div>
               </div>

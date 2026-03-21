@@ -60,8 +60,6 @@ export const courses = pgTable("courses", {
   instructorName: text("instructor_name").notNull(),
   instructorImageUrl: text("instructor_image_url"),
   instructorBio: text("instructor_bio"),
-  rating: text("rating").default("0"),
-  totalStudents: integer("total_students").default(0),
   priceStrategy: text("price_strategy").notNull().default("PAID"), // FREE | PAID
   price: text("price").default("0"), // course-level price in ETB (used when priceStrategy=PAID)
   introVideoProvider: text("intro_video_provider").default("BUNNY"), // BUNNY | YOUTUBE | VIMEO | URL
@@ -116,6 +114,14 @@ export const accessGrants = pgTable("access_grants", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const courseRatings = pgTable("course_ratings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  courseId: integer("course_id").notNull(),
+  rating: integer("rating").notNull(), // 1–5
+  createdAt: timestamp("created_at").defaultNow(),
+}, (t) => [unique().on(t.userId, t.courseId)]);
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, passwordHash: true }).extend({
   password: z.string().min(6),
 });
@@ -130,8 +136,6 @@ export const insertCourseSchema = createInsertSchema(courses).omit({ id: true, c
   introVideoProvider: z.string().optional().nullable(),
   instructorImageUrl: z.string().optional().nullable().transform(v => v === "" ? null : v),
   instructorBio: z.string().optional().nullable().transform(v => v === "" ? null : v),
-  rating: z.string().optional().nullable(),
-  totalStudents: z.number().optional().nullable(),
 });
 export const insertSeasonSchema = createInsertSchema(seasons).omit({ id: true, createdAt: true });
 export const insertEpisodeSchema = createInsertSchema(episodes).omit({ id: true, createdAt: true });
@@ -155,6 +159,10 @@ export type Purchase = typeof purchases.$inferSelect;
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type AccessGrant = typeof accessGrants.$inferSelect;
 export type InsertAccessGrant = z.infer<typeof insertAccessGrantSchema>;
+
+export const insertCourseRatingSchema = z.object({ courseId: z.number(), rating: z.number().min(1).max(5) });
+export type CourseRating = typeof courseRatings.$inferSelect;
+export type InsertCourseRating = z.infer<typeof insertCourseRatingSchema>;
 
 export const appSettings = pgTable("app_settings", {
   key: text("key").primaryKey(),

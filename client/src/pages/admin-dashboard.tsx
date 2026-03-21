@@ -64,6 +64,49 @@ function BunnyVideoRefInput({
   );
 }
 
+function InstructorImageUpload({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      onChange(data.url);
+    } catch {
+      // silent
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="h-12 w-12 rounded-full border-2 border-dashed border-border bg-secondary flex items-center justify-center flex-shrink-0 overflow-hidden">
+        {value ? (
+          <img src={value} alt="Instructor" className="w-full h-full object-cover" />
+        ) : (
+          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+        <Button type="button" variant="outline" size="sm" className="h-9 text-xs gap-1.5" onClick={() => inputRef.current?.click()} disabled={uploading}>
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {uploading ? "Uploading..." : value ? "Change photo" : "Upload photo"}
+        </Button>
+        {value && (
+          <button type="button" className="ml-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => onChange("")}>Remove</button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 type AdminTab = "overview" | "courses" | "categories" | "users" | "settings" | "purchases" | "payments" | "analytics" | "broadcasts";
 
 const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
@@ -923,7 +966,7 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
 
   const form = useForm({
     resolver: zodResolver(insertCourseSchema),
-    defaultValues: { title: "", slug: "", description: "", instructorName: "", instructorImageUrl: "", instructorBio: "", rating: "0", totalStudents: 0, categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
+    defaultValues: { title: "", slug: "", description: "", instructorName: "", instructorImageUrl: "", instructorBio: "", categoryId: 0, thumbnailUrl: "", priceStrategy: "PAID", price: "0" }
   });
   const watchedPriceStrategy = form.watch("priceStrategy");
   const watchedIntroVideoProvider = form.watch("introVideoProvider");
@@ -957,16 +1000,11 @@ function CourseManagement({ courses, categories }: { courses: any[]; categories:
                   <Input {...form.register("instructorName")} placeholder="Instructor Name" className="h-10" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Instructor Image URL <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-                  <Input {...form.register("instructorImageUrl")} placeholder="https://..." className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Rating <span className="text-muted-foreground font-normal text-xs">(0–5)</span></Label>
-                  <Input {...form.register("rating")} placeholder="4.7" className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Total Students</Label>
-                  <Input {...form.register("totalStudents", { valueAsNumber: true })} placeholder="1200" className="h-10" type="number" />
+                  <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+                  <InstructorImageUpload
+                    value={form.watch("instructorImageUrl") || ""}
+                    onChange={(url) => form.setValue("instructorImageUrl", url)}
+                  />
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
@@ -1181,8 +1219,6 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
       introVideoRef: course.introVideoRef || "",
       instructorImageUrl: (course as any).instructorImageUrl || "",
       instructorBio: (course as any).instructorBio || "",
-      rating: (course as any).rating || "0",
-      totalStudents: (course as any).totalStudents || 0,
     }
   });
   const editWatchedPriceStrategy = form.watch("priceStrategy");
@@ -1209,16 +1245,11 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
             <Input {...form.register("instructorName")} className="h-10" />
           </div>
           <div className="space-y-1.5">
-            <Label>Instructor Image URL <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
-            <Input {...form.register("instructorImageUrl")} placeholder="https://..." className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Rating <span className="text-muted-foreground font-normal text-xs">(0–5)</span></Label>
-            <Input {...form.register("rating")} placeholder="4.7" className="h-10" />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Total Students</Label>
-            <Input {...form.register("totalStudents", { valueAsNumber: true })} placeholder="1200" className="h-10" type="number" />
+            <Label>Instructor Photo <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
+            <InstructorImageUpload
+              value={form.watch("instructorImageUrl") || ""}
+              onChange={(url) => form.setValue("instructorImageUrl", url)}
+            />
           </div>
           <div className="space-y-1.5 col-span-2">
             <Label>Instructor Bio <span className="text-muted-foreground font-normal text-xs">(optional)</span></Label>
