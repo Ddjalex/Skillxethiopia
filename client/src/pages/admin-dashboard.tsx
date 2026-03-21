@@ -1318,7 +1318,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.protected.dashboardCourse.path, { id: course.id }] });
-      toast({ title: "Section added" });
+      toast({ title: "Session added" });
       seasonForm.reset();
       setAddingSection(false);
     },
@@ -1431,7 +1431,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="details" className="flex-1">Course Details</TabsTrigger>
-              <TabsTrigger value="content" className="flex-1">Sections & Episodes</TabsTrigger>
+              <TabsTrigger value="content" className="flex-1">Sessions & Episodes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="details" className="mt-0">
@@ -1538,7 +1538,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                         <div className="flex items-center justify-between px-4 py-3 bg-secondary/40 border-b border-border">
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="font-semibold text-sm">Section {season.seasonNumber}: {season.title}</p>
+                              <p className="font-semibold text-sm">Session {season.seasonNumber}: {season.title}</p>
                               {season.instructorName && <p className="text-xs text-muted-foreground">BY {season.instructorName}</p>}
                             </div>
                             <InlinePrice type="season" id={season.id} price={season.price} />
@@ -1563,7 +1563,7 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
 
                         {addingEpisodeForSeason === season.id && (
                           <div className="px-4 py-3 bg-secondary/10 border-b border-border">
-                            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Add Episode to Section {season.seasonNumber}</p>
+                            <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">Add Episode to Session {season.seasonNumber}</p>
                             <form onSubmit={episodeForm.handleSubmit((data) => createEpisode.mutate({ ...data, seasonId: season.id }))} className="grid grid-cols-2 gap-3">
                               <div className="space-y-1">
                                 <Label className="text-xs">Episode Title</Label>
@@ -1659,14 +1659,14 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
 
                     {addingSection ? (
                       <div className="border border-dashed border-border rounded-lg px-4 py-4">
-                        <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">New Section</p>
+                        <p className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">New Session</p>
                         <form onSubmit={seasonForm.handleSubmit((data) => createSeason.mutate(data))} className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
-                            <Label className="text-xs">Section Title</Label>
+                            <Label className="text-xs">Session Title</Label>
                             <Input {...seasonForm.register("title")} placeholder="e.g. Getting Started" className="h-9 text-sm" />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Section Number</Label>
+                            <Label className="text-xs">Session Number</Label>
                             <Input type="number" {...seasonForm.register("seasonNumber", { valueAsNumber: true })} className="h-9 text-sm" />
                           </div>
                           <div className="space-y-1">
@@ -1676,14 +1676,14 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                           <div className="col-span-2 flex gap-2 justify-end">
                             <Button type="button" variant="ghost" size="sm" onClick={() => setAddingSection(false)}>Cancel</Button>
                             <Button type="submit" size="sm" disabled={createSeason.isPending}>
-                              {createSeason.isPending ? "Adding..." : "Add Section"}
+                              {createSeason.isPending ? "Adding..." : "Add Session"}
                             </Button>
                           </div>
                         </form>
                       </div>
                     ) : (
                       <Button variant="outline" className="w-full gap-2 border-dashed" onClick={() => setAddingSection(true)}>
-                        <Plus className="h-4 w-4" /> Add Section
+                        <Plus className="h-4 w-4" /> Add Session
                       </Button>
                     )}
                   </>
