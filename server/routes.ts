@@ -119,53 +119,84 @@ async function downloadBunnyThumbnail(videoRef: string, apiKey: string): Promise
   }
 }
 
-// Get a direct MP4 URL for a Bunny Stream video via the management API
-async function getBunnyDirectVideoUrl(videoRef: string, apiKey: string): Promise<string | null> {
+// Download a Bunny Stream video binary and upload it directly to Telegram.
+// We try multiple resolutions (lowest first to stay within Telegram's 50MB limit).
+// Server-to-server requests bypass browser hotlink protection on the CDN.
+async function downloadAndSendBunnyVideoToTelegram(
+  videoRef: string,
+  apiKey: string,
+  token: string,
+  channelId: string,
+  caption: string,
+): Promise<boolean> {
   const parts = videoRef.split("/");
-  if (parts.length < 2) return null;
+  if (parts.length < 2) return false;
   const [libraryId, videoId] = [parts[0], parts[1]];
-  try {
-    const res = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
-      headers: { AccessKey: apiKey },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (!res.ok) {
-      console.log(`Bunny video metadata API returned ${res.status} for ${videoId}`);
-      return null;
-    }
-    const data = await res.json() as any;
-    if (data.pullZone && videoId) {
-      return `https://${data.pullZone}.b-cdn.net/${videoId}/play_720p.mp4`;
-    }
-    return null;
-  } catch (err: any) {
-    console.log("Bunny video metadata fetch failed:", err.message);
-    return null;
-  }
-}
 
-// Send a video to Telegram via URL (for direct MP4 links)
-async function callTelegramSendVideo(token: string, chatId: string, videoUrl: string, caption: string): Promise<boolean> {
+  // Get video metadata to find the pull zone (CDN hostname)
+  let pullZone: string | null = null;
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        video: videoUrl,
-        caption,
-        parse_mode: "HTML",
-        supports_streaming: true,
-      }),
+    const metaRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos/${videoId}`, {
+      headers: { AccessKey: apiKey },
+      signal: AbortSignal.timeout(10000),
     });
-    const data = await res.json() as { ok: boolean; description?: string };
-    if (data.ok) return true;
-    console.log("Telegram sendVideo failed:", data.description);
-    return false;
+    if (metaRes.ok) {
+      const meta = await metaRes.json() as any;
+      pullZone = meta.pullZone ?? null;
+    }
   } catch (err: any) {
-    console.log("Telegram sendVideo error:", err.message);
-    return false;
+    console.log("Bunny metadata fetch failed:", err.message);
   }
+
+  if (!pullZone) return false;
+
+  // Try resolutions from lowest to highest — lowest is most likely within Telegram's 50 MB cap
+  const resolutions = ["360", "480", "720"];
+  for (const res of resolutions) {
+    const videoUrl = `https://${pullZone}.b-cdn.net/${videoId}/play_${res}p.mp4`;
+    try {
+      // Our server fetches the video; server-to-server bypasses CDN hotlink protection
+      const videoRes = await fetch(videoUrl, { signal: AbortSignal.timeout(60000) });
+      if (!videoRes.ok) {
+        console.log(`Bunny CDN ${res}p returned ${videoRes.status}`);
+        continue;
+      }
+
+      const contentLength = Number(videoRes.headers.get("content-length") ?? 0);
+      if (contentLength > 50 * 1024 * 1024) {
+        console.log(`Bunny ${res}p too large (${contentLength} bytes), skipping`);
+        continue;
+      }
+
+      const videoBuffer = await videoRes.arrayBuffer();
+      if (videoBuffer.byteLength > 50 * 1024 * 1024) {
+        console.log(`Bunny ${res}p buffer too large after download, skipping`);
+        continue;
+      }
+
+      // Upload as binary to Telegram
+      const formData = new FormData();
+      formData.append("chat_id", channelId);
+      formData.append("caption", caption);
+      formData.append("parse_mode", "HTML");
+      formData.append("supports_streaming", "true");
+      formData.append("video", new Blob([videoBuffer], { type: "video/mp4" }), "video.mp4");
+
+      const uploadRes = await fetch(`https://api.telegram.org/bot${token}/sendVideo`, {
+        method: "POST",
+        body: formData,
+      });
+      const uploadData = await uploadRes.json() as { ok: boolean; description?: string };
+      if (uploadData.ok) {
+        console.log(`Bunny ${res}p video sent to Telegram successfully`);
+        return true;
+      }
+      console.log(`Telegram sendVideo binary failed for ${res}p:`, uploadData.description);
+    } catch (err: any) {
+      console.log(`Failed to download/send Bunny ${res}p video:`, err.message);
+    }
+  }
+  return false;
 }
 
 async function getChannelCredentials(): Promise<{ token: string | undefined; channelId: string | undefined }> {
@@ -1026,18 +1057,17 @@ export async function registerRoutes(
       messageText += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
 
       if (ep.videoProvider === "BUNNY" && ep.videoRef) {
-        // Bunny CDN: try to get direct MP4 URL and send as video, else fallback to thumbnail, then text
+        // Bunny CDN: download video binary on our server and upload directly to Telegram.
+        // Our server fetches the video (server-to-server, no Referer header) which bypasses
+        // CDN hotlink protection that would block Telegram's servers.
         const bunnyApiKey = (await storage.getSetting("BUNNY_API_KEY")) || process.env.BUNNY_API_KEY;
         let sent = false;
 
         if (bunnyApiKey) {
-          // Try sending as a real video file
-          const directVideoUrl = await getBunnyDirectVideoUrl(ep.videoRef, bunnyApiKey);
-          if (directVideoUrl) {
-            sent = await callTelegramSendVideo(token, channelId, directVideoUrl, caption);
-          }
+          // Primary: download video binary and upload to Telegram
+          sent = await downloadAndSendBunnyVideoToTelegram(ep.videoRef, bunnyApiKey, token, channelId, caption);
 
-          // Fallback: send thumbnail image if video send failed
+          // Fallback: if video send failed, send thumbnail image instead
           if (!sent) {
             const thumbBuffer = await downloadBunnyThumbnail(ep.videoRef, bunnyApiKey);
             if (thumbBuffer) {
