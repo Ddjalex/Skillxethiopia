@@ -802,6 +802,27 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
   });
 
   const [inlineEdit, setInlineEdit] = useState<{ type: "season" | "episode"; id: number; value: string } | null>(null);
+  const [broadcastingEpId, setBroadcastingEpId] = useState<number | null>(null);
+
+  const broadcastEpisodeMutation = useMutation({
+    mutationFn: async (episodeId: number) => {
+      const res = await apiRequest("POST", `/api/admin/episodes/${episodeId}/broadcast-telegram`, {});
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: "Failed to broadcast" }));
+        throw new Error(err.message);
+      }
+      return res.json();
+    },
+    onMutate: (episodeId) => setBroadcastingEpId(episodeId),
+    onSuccess: () => {
+      setBroadcastingEpId(null);
+      toast({ title: "Sent to Telegram!", description: "Episode preview was broadcast to your channel." });
+    },
+    onError: (err: any) => {
+      setBroadcastingEpId(null);
+      toast({ title: "Broadcast failed", description: err.message, variant: "destructive" });
+    },
+  });
 
   const quickUpdatePrice = useMutation({
     mutationFn: async ({ type, id, price }: { type: "season" | "episode"; id: number; price: string }) => {
@@ -968,6 +989,21 @@ function CourseContentDialog({ courseId }: { courseId: number }) {
                                 )}
                               </DialogContent>
                             </Dialog>
+                            {ep.isPreview && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-sky-500 hover:text-sky-600 hover:bg-sky-50"
+                                title="Broadcast to Telegram channel"
+                                data-testid={`broadcast-episode-${ep.id}`}
+                                disabled={broadcastingEpId === ep.id}
+                                onClick={() => broadcastEpisodeMutation.mutate(ep.id)}
+                              >
+                                {broadcastingEpId === ep.id
+                                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  : <Send className="h-3.5 w-3.5" />}
+                              </Button>
+                            )}
                             <EditEpisodeDialog episode={ep} courseId={courseId} />
                             <DeleteConfirmDialog
                               type="episode"

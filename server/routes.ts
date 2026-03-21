@@ -40,6 +40,19 @@ async function callTelegramSendMessage(token: string, chatId: string, message: s
   }
 }
 
+async function callTelegramSendPhoto(token: string, chatId: string, photoUrl: string, caption: string): Promise<void> {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chat_id: chatId, photo: photoUrl, caption, parse_mode: "HTML" }),
+  });
+  const data = await res.json() as { ok: boolean; description?: string };
+  if (!data.ok) {
+    // Fall back to plain message if photo fails (e.g. bad URL)
+    await callTelegramSendMessage(token, chatId, caption);
+  }
+}
+
 async function sendTelegramNotification(message: string) {
   const { token, chatId } = await getTelegramCredentials();
   if (!token || !chatId) return;
@@ -833,6 +846,79 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err: any) {
       res.status(400).json({ message: err.message ?? "Failed to send test message" });
+    }
+  });
+
+  // Broadcast a single preview episode to Telegram channel
+  app.post("/api/admin/episodes/:id/broadcast-telegram", requireAdmin, async (req, res) => {
+    const episodeId = Number(req.params.id);
+    try {
+      // Fetch episode + season + course in one join
+      const rows = await db
+        .select({
+          ep: episodes,
+          season: seasons,
+          course: courses,
+        })
+        .from(episodes)
+        .innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+        .innerJoin(courses, eq(seasons.courseId, courses.id))
+        .where(eq(episodes.id, episodeId));
+
+      if (!rows.length) return res.status(404).json({ message: "Episode not found" });
+
+      const { ep, season, course } = rows[0];
+
+      const token =
+        (await storage.getSetting("TELEGRAM_BOT_TOKEN")) || process.env.TELEGRAM_BOT_TOKEN;
+      const channelId =
+        (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
+        process.env.TELEGRAM_CHANNEL_ID ||
+        (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
+        process.env.TELEGRAM_CHAT_ID;
+
+      if (!token || !channelId) {
+        return res.status(400).json({ message: "Telegram is not configured." });
+      }
+
+      // Build video URL for shareable providers
+      let videoUrl: string | null = null;
+      if (ep.videoProvider === "YOUTUBE") {
+        videoUrl = ep.videoRef.startsWith("http")
+          ? ep.videoRef
+          : `https://www.youtube.com/watch?v=${ep.videoRef}`;
+      } else if (ep.videoProvider === "VIMEO") {
+        videoUrl = ep.videoRef.startsWith("http")
+          ? ep.videoRef
+          : `https://vimeo.com/${ep.videoRef}`;
+      } else if (ep.videoProvider === "DAILYMOTION") {
+        videoUrl = ep.videoRef.startsWith("http")
+          ? ep.videoRef
+          : `https://www.dailymotion.com/video/${ep.videoRef}`;
+      } else if (ep.videoRef.startsWith("http")) {
+        videoUrl = ep.videoRef;
+      }
+
+      // Build the caption
+      let caption = `🎬 <b>Free Preview — ${ep.title}</b>\n\n`;
+      caption += `📚 <b>${course.title}</b>`;
+      if (season.title) caption += ` · ${season.title}`;
+      if (ep.description) caption += `\n\n${ep.description}`;
+      if (videoUrl) caption += `\n\n▶️ <a href="${videoUrl}">Watch Now</a>`;
+      caption += `\n\n🚀 <b>SkillXethiopia</b> — Learn from real-world experts.`;
+
+      const thumbnail = (ep as any).thumbnailUrl || course.thumbnailUrl;
+
+      if (thumbnail && thumbnail.startsWith("http")) {
+        await callTelegramSendPhoto(token, channelId, thumbnail, caption);
+      } else {
+        await callTelegramSendMessage(token, channelId, caption);
+      }
+
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("Episode broadcast failed:", err);
+      res.status(500).json({ message: err.message ?? "Failed to broadcast episode" });
     }
   });
 
