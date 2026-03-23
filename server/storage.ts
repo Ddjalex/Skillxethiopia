@@ -92,6 +92,7 @@ export interface IStorage {
   // Email Tokens
   createEmailToken(email: string, token: string, type: string, expiresAt: Date): Promise<EmailToken>;
   getEmailToken(token: string, type: string): Promise<EmailToken | undefined>;
+  getEmailTokenByEmailAndCode(email: string, code: string, type: string): Promise<EmailToken | undefined>;
   markEmailTokenUsed(id: number): Promise<void>;
   updateUserEmailVerified(email: string): Promise<User>;
   updateUserPassword(email: string, passwordHash: string): Promise<User>;
@@ -435,6 +436,11 @@ export class DatabaseStorage implements IStorage {
   async getEmailToken(token: string, type: string): Promise<EmailToken | undefined> {
     const [row] = await db.select().from(emailTokens)
       .where(and(eq(emailTokens.token, token), eq(emailTokens.type, type)));
+    return row;
+  }
+  async getEmailTokenByEmailAndCode(email: string, code: string, type: string): Promise<EmailToken | undefined> {
+    const [row] = await db.select().from(emailTokens)
+      .where(and(eq(emailTokens.email, email), eq(emailTokens.token, code), eq(emailTokens.type, type)));
     return row;
   }
   async markEmailTokenUsed(id: number): Promise<void> {

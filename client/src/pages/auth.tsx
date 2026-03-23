@@ -4,13 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, insertUserSchema } from "@shared/routes";
 import { useLocation, Link } from "wouter";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Loader2, Sparkles, BookOpen, Users, Eye, EyeOff, CheckCircle2, Mail } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { api } from "@shared/routes";
+import { Loader2, Sparkles, BookOpen, Users, Eye, EyeOff, CheckCircle2, Mail, RefreshCw } from "lucide-react";
 
 const features = [
   { icon: BookOpen, label: "Premium Courses", desc: "Hand-crafted by expert instructors" },
@@ -233,9 +237,143 @@ const registerSchema = insertUserSchema.extend({
   path: ["confirmPassword"],
 });
 
+function VerifyCodeForm({ email, onBack }: { email: string; onBack: () => void }) {
+  const [, setLocation] = useLocation();
+  const [code, setCode] = useState("");
+  const [resent, setResent] = useState(false);
+
+  function parseApiError(err: unknown): string {
+    const msg = (err as Error)?.message || "";
+    const match = msg.match(/^\d+: (.+)$/);
+    if (match) {
+      try { return JSON.parse(match[1])?.message || match[1]; } catch { return match[1]; }
+    }
+    return msg || "Something went wrong. Please try again.";
+  }
+
+  const verifyMutation = useMutation({
+    mutationFn: async (data: { email: string; code: string }) => {
+      const res = await apiRequest("POST", "/api/auth/verify-email", data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.success && data.user) {
+        queryClient.setQueryData([api.auth.me.path], data.user);
+        setLocation("/dashboard");
+      }
+    },
+  });
+
+  const resendMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/auth/resend-verification", { email });
+      return res.json();
+    },
+    onSuccess: () => setResent(true),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (code.length === 6) {
+      verifyMutation.mutate({ email, code });
+    }
+  };
+
+  return (
+    <div className="space-y-5" data-testid="verify-code-form">
+      <div className="text-center space-y-3 py-2">
+        <div className="flex justify-center">
+          <div className="h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Mail className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-lg">Check your inbox</h3>
+          <p className="text-sm text-muted-foreground">
+            We sent a 6-digit code to <span className="font-semibold text-foreground">{email}</span>.
+            Enter it below to activate your account.
+          </p>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex flex-col items-center gap-2">
+          <InputOTP
+            maxLength={6}
+            value={code}
+            onChange={setCode}
+            data-testid="input-verify-code"
+          >
+            <InputOTPGroup>
+              <InputOTPSlot index={0} />
+              <InputOTPSlot index={1} />
+              <InputOTPSlot index={2} />
+              <InputOTPSlot index={3} />
+              <InputOTPSlot index={4} />
+              <InputOTPSlot index={5} />
+            </InputOTPGroup>
+          </InputOTP>
+          {verifyMutation.isError && (
+            <p className="text-xs text-destructive text-center" data-testid="error-verify-code">
+              {parseApiError(verifyMutation.error)}
+            </p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full h-10 rounded-lg font-semibold"
+          disabled={code.length < 6 || verifyMutation.isPending}
+          data-testid="button-verify-code"
+        >
+          {verifyMutation.isPending ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Verifying...
+            </>
+          ) : (
+            "Verify & Activate Account"
+          )}
+        </Button>
+      </form>
+
+      <div className="text-center space-y-2">
+        {resent ? (
+          <p className="text-xs text-green-600 dark:text-green-400 flex items-center justify-center gap-1">
+            <CheckCircle2 className="h-3.5 w-3.5" /> New code sent!
+          </p>
+        ) : (
+          <button
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mx-auto disabled:opacity-50"
+            onClick={() => resendMutation.mutate()}
+            disabled={resendMutation.isPending}
+            data-testid="button-resend-code"
+            type="button"
+          >
+            {resendMutation.isPending ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <RefreshCw className="h-3 w-3" />
+            )}
+            Didn't get it? Resend code
+          </button>
+        )}
+        <button
+          className="text-xs text-muted-foreground hover:text-primary"
+          onClick={onBack}
+          type="button"
+          data-testid="button-back-register"
+        >
+          Use a different email
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function RegisterForm() {
   const { registerMutation } = useAuth();
-  const [emailSent, setEmailSent] = useState(false);
+  const [showVerify, setShowVerify] = useState(false);
   const [sentEmail, setSentEmail] = useState("");
 
   const form = useForm({
@@ -247,36 +385,12 @@ function RegisterForm() {
     setSentEmail(data.email);
     registerMutation.mutate(
       { name: data.name, email: data.email, password: data.password },
-      { onSuccess: () => setEmailSent(true) }
+      { onSuccess: () => setShowVerify(true) }
     );
   };
 
-  if (emailSent) {
-    return (
-      <div className="text-center space-y-4 py-4" data-testid="register-email-sent">
-        <div className="flex justify-center">
-          <div className="h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-            <Mail className="h-7 w-7 text-blue-600 dark:text-blue-400" />
-          </div>
-        </div>
-        <div className="space-y-1">
-          <h3 className="font-bold text-lg">Check your inbox</h3>
-          <p className="text-sm text-muted-foreground">
-            We sent a verification link to <span className="font-semibold text-foreground">{sentEmail}</span>.
-            Click the link in the email to activate your account.
-          </p>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Didn't get it?{" "}
-          <button
-            className="text-primary hover:underline font-medium"
-            onClick={() => setEmailSent(false)}
-          >
-            Try again
-          </button>
-        </p>
-      </div>
-    );
+  if (showVerify) {
+    return <VerifyCodeForm email={sentEmail} onBack={() => setShowVerify(false)} />;
   }
 
   return (

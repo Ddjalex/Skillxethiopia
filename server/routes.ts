@@ -57,6 +57,10 @@ function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
 
+function generateVerificationCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 function getBaseUrl(req: any): string {
   return process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
 }
@@ -419,49 +423,39 @@ export async function registerRoutes(
   };
 
   // --- Auth Routes ---
+  async function sendVerificationCode(email: string, name: string, code: string): Promise<void> {
+    await sendBrevoEmail(email, name, "Your SkillXethiopia verification code", `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+        <h2 style="margin-bottom:8px;font-size:22px;color:#111827;">Verify your email address</h2>
+        <p style="color:#4b5563;margin-bottom:24px;">Hi ${name}, use the code below to activate your SkillXethiopia account. This code expires in 10 minutes.</p>
+        <div style="display:inline-block;padding:16px 40px;background:#f3f4f6;border-radius:12px;font-size:36px;font-weight:700;letter-spacing:10px;color:#111827;margin-bottom:24px;">${code}</div>
+        <p style="font-size:13px;color:#9ca3af;">If you didn't create an account, you can safely ignore this email.</p>
+      </div>
+    `);
+  }
+
   app.post(api.auth.register.path, async (req, res) => {
     try {
       const input = api.auth.register.input.parse(req.body);
       const existing = await storage.getUserByEmail(input.email);
       if (existing) {
         if (!existing.isEmailVerified) {
-          // Resend verification email
-          const token = generateToken();
-          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-          await storage.createEmailToken(existing.email, token, "VERIFY", expiresAt);
-          const baseUrl = getBaseUrl(req);
-          const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
-          await sendBrevoEmail(existing.email, existing.name, "Verify your SkillXethiopia account", `
-            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
-              <h2>Verify your email address</h2>
-              <p>Hi ${existing.name},</p>
-              <p>Please click the button below to verify your email address and activate your account.</p>
-              <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Verify Email</a>
-              <p style="margin-top:16px;font-size:13px;color:#6b7280;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
-            </div>
-          `);
+          const code = generateVerificationCode();
+          const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+          await storage.createEmailToken(existing.email, code, "VERIFY", expiresAt);
+          await sendVerificationCode(existing.email, existing.name, code);
           return res.status(200).json({ message: "verification_sent" });
         }
         return res.status(400).json({ message: "Email already exists" });
       }
-      
+
       const passwordHash = await hash(input.password, 10);
       const user = await storage.createUser({ name: input.name, email: input.email, passwordHash });
 
-      const token = generateToken();
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-      await storage.createEmailToken(user.email, token, "VERIFY", expiresAt);
-      const baseUrl = getBaseUrl(req);
-      const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
-      await sendBrevoEmail(user.email, user.name, "Verify your SkillXethiopia account", `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
-          <h2>Verify your email address</h2>
-          <p>Hi ${user.name},</p>
-          <p>Thanks for signing up! Please verify your email address to activate your account.</p>
-          <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Verify Email</a>
-          <p style="margin-top:16px;font-size:13px;color:#6b7280;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
-        </div>
-      `);
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await storage.createEmailToken(user.email, code, "VERIFY", expiresAt);
+      await sendVerificationCode(user.email, user.name, code);
 
       res.status(201).json({ message: "verification_sent" });
     } catch (err) {
@@ -473,23 +467,45 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/auth/verify-email", async (req, res) => {
-    const token = req.query.token as string;
-    if (!token) return res.status(400).json({ message: "Missing token" });
+  app.post("/api/auth/resend-verification", async (req, res) => {
+    try {
+      const { email } = z.object({ email: z.string().email() }).parse(req.body);
+      const user = await storage.getUserByEmail(email);
+      if (!user || user.isEmailVerified) {
+        return res.json({ message: "verification_sent" });
+      }
+      const code = generateVerificationCode();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      await storage.createEmailToken(user.email, code, "VERIFY", expiresAt);
+      await sendVerificationCode(user.email, user.name, code);
+      res.json({ message: "verification_sent" });
+    } catch (err) {
+      res.status(400).json({ message: "Invalid request" });
+    }
+  });
 
-    const emailToken = await storage.getEmailToken(token, "VERIFY");
-    if (!emailToken) return res.status(400).json({ message: "Invalid or expired token" });
-    if (emailToken.used) return res.status(400).json({ message: "Token already used" });
-    if (new Date() > emailToken.expiresAt) return res.status(400).json({ message: "Token has expired" });
+  app.post("/api/auth/verify-email", async (req, res) => {
+    try {
+      const { email, code } = z.object({ email: z.string().email(), code: z.string().length(6) }).parse(req.body);
+      const emailToken = await storage.getEmailTokenByEmailAndCode(email, code, "VERIFY");
+      if (!emailToken) return res.status(400).json({ message: "Invalid verification code. Please check and try again." });
+      if (emailToken.used) return res.status(400).json({ message: "This code has already been used." });
+      if (new Date() > emailToken.expiresAt) return res.status(400).json({ message: "This code has expired. Please request a new one." });
 
-    const user = await storage.updateUserEmailVerified(emailToken.email);
-    await storage.markEmailTokenUsed(emailToken.id);
+      const user = await storage.updateUserEmailVerified(emailToken.email);
+      await storage.markEmailTokenUsed(emailToken.id);
 
-    req.login(user, (err) => {
-      if (err) return res.status(500).json({ message: "Verification successful but login failed" });
-      const { passwordHash: _, ...userSafe } = user;
-      res.json({ success: true, user: userSafe });
-    });
+      req.login(user, (err) => {
+        if (err) return res.status(500).json({ message: "Verification successful but login failed" });
+        const { passwordHash: _, ...userSafe } = user;
+        res.json({ success: true, user: userSafe });
+      });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: "Please enter a valid 6-digit code." });
+      }
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   app.post("/api/auth/forgot-password", async (req, res) => {
