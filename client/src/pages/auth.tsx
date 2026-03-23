@@ -458,7 +458,7 @@ function RegisterForm() {
             Creating account...
           </>
         ) : (
-          "Create Free Account"
+          "Create Account"
         )}
       </Button>
       {registerMutation.isError && (
