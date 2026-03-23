@@ -15,7 +15,7 @@ export default function EpisodePlayer() {
   const courseId = params?.courseId ? parseInt(params.courseId) : 0;
   const episodeId = params?.episodeId ? parseInt(params.episodeId) : 0;
 
-  const { data: streamData, isLoading: streamLoading } = useEpisodeStream(episodeId);
+  const { data: streamData, isLoading: streamLoading, error: streamError } = useEpisodeStream(episodeId);
   const { data: courseData } = useDashboardCourse(courseId);
 
   const [playerError, setPlayerError] = useState<string | null>(null);
@@ -38,6 +38,28 @@ export default function EpisodePlayer() {
         <Navbar />
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  if (streamError) {
+    return (
+      <div className="h-screen flex flex-col bg-[#0a0a0f]">
+        <Navbar />
+        <div className="flex-1 flex flex-col items-center justify-center text-white p-6 text-center">
+          <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <Lock className="w-10 h-10 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-3">Content Locked</h2>
+          <p className="text-white/60 max-w-sm mb-8">
+            You need to enroll and complete payment before you can watch this episode.
+          </p>
+          <Link href={courseData?.course?.slug ? `/course/${courseData.course.slug}` : "/browse"}>
+            <Button size="lg" className="gap-2">
+              Enroll Now
+            </Button>
+          </Link>
         </div>
       </div>
     );
