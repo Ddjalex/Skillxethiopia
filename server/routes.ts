@@ -25,9 +25,9 @@ import crypto from "crypto";
 
 // --- Brevo Email ---
 async function sendBrevoEmail(to: string, toName: string, subject: string, htmlContent: string): Promise<void> {
-  const apiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || "noreply@skillxethiopia.com";
-  const senderName = process.env.BREVO_SENDER_NAME || "SkillXethiopia";
+  const apiKey = await storage.getSetting("BREVO_API_KEY") || process.env.BREVO_API_KEY;
+  const senderEmail = await storage.getSetting("BREVO_SENDER_EMAIL") || process.env.BREVO_SENDER_EMAIL || "noreply@skillxethiopia.com";
+  const senderName = await storage.getSetting("BREVO_SENDER_NAME") || process.env.BREVO_SENDER_NAME || "SkillXethiopia";
   if (!apiKey) {
     console.warn("BREVO_API_KEY not set — skipping email send");
     return;
@@ -1348,7 +1348,7 @@ export async function registerRoutes(
   });
 
   // --- App Settings (API Tokens) ---
-  const ALLOWED_SETTING_KEYS = ["BUNNY_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_CHANNEL_ID"];
+  const ALLOWED_SETTING_KEYS = ["BUNNY_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_CHANNEL_ID", "BREVO_API_KEY", "BREVO_SENDER_EMAIL", "BREVO_SENDER_NAME"];
 
   app.get("/api/admin/settings", requireAdmin, async (req, res) => {
     const all = await storage.getAllSettings();

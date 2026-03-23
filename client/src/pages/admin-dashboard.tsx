@@ -2448,6 +2448,9 @@ function AdminSettings() {
     TELEGRAM_BOT_TOKEN: "",
     TELEGRAM_CHAT_ID: "",
     TELEGRAM_CHANNEL_ID: "",
+    BREVO_API_KEY: "",
+    BREVO_SENDER_EMAIL: "",
+    BREVO_SENDER_NAME: "",
   });
   const [detectedChats, setDetectedChats] = useState<{ id: string; type: string; title?: string; first_name?: string; username?: string }[]>([]);
   const [detectedChannelChats, setDetectedChannelChats] = useState<{ id: string; type: string; title?: string; first_name?: string; username?: string }[]>([]);
@@ -2463,6 +2466,9 @@ function AdminSettings() {
         TELEGRAM_BOT_TOKEN: savedSettings.TELEGRAM_BOT_TOKEN ?? "",
         TELEGRAM_CHAT_ID: savedSettings.TELEGRAM_CHAT_ID ?? "",
         TELEGRAM_CHANNEL_ID: savedSettings.TELEGRAM_CHANNEL_ID ?? "",
+        BREVO_API_KEY: savedSettings.BREVO_API_KEY ?? "",
+        BREVO_SENDER_EMAIL: savedSettings.BREVO_SENDER_EMAIL ?? "",
+        BREVO_SENDER_NAME: savedSettings.BREVO_SENDER_NAME ?? "",
       });
     }
   }, [savedSettings]);
@@ -2677,6 +2683,59 @@ function AdminSettings() {
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
               ) : (
                 <><Save className="mr-2 h-4 w-4" /> Save Tokens</>
+              )}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Brevo Email Settings */}
+      <div className="card-base p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <Send className="h-4 w-4 text-muted-foreground" />
+          <div>
+            <p className="font-semibold text-sm">Brevo Email Settings</p>
+            <p className="text-xs text-muted-foreground">Configure the email service used for verification and password reset emails.</p>
+          </div>
+        </div>
+
+        {tokensLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading settings...
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <TokenInput
+              label="BREVO_API_KEY"
+              description="Your Brevo (Sendinblue) API key. Found under Settings → API Keys in your Brevo account."
+              value={tokens.BREVO_API_KEY}
+              onChange={(v) => setTokens(t => ({ ...t, BREVO_API_KEY: v }))}
+              placeholder="xkeysib-..."
+            />
+            <TokenInput
+              label="BREVO_SENDER_EMAIL"
+              description="The verified sender email address. Must be a verified sender in your Brevo account."
+              value={tokens.BREVO_SENDER_EMAIL}
+              onChange={(v) => setTokens(t => ({ ...t, BREVO_SENDER_EMAIL: v }))}
+              placeholder="noreply@yourdomain.com"
+            />
+            <TokenInput
+              label="BREVO_SENDER_NAME"
+              description={"The display name shown in recipients' inboxes (e.g. \"SkillXethiopia\")."}
+              value={tokens.BREVO_SENDER_NAME}
+              onChange={(v) => setTokens(t => ({ ...t, BREVO_SENDER_NAME: v }))}
+              placeholder="SkillXethiopia"
+            />
+            <Button
+              className="w-full"
+              onClick={() => saveTokens.mutate()}
+              disabled={saveTokens.isPending}
+              data-testid="button-save-brevo"
+            >
+              {saveTokens.isPending ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
+              ) : (
+                <><Save className="mr-2 h-4 w-4" /> Save Email Settings</>
               )}
             </Button>
           </div>
