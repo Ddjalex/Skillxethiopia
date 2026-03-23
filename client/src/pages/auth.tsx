@@ -27,7 +27,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      setLocation(user.role === "ADMIN" ? "/admin" : "/dashboard");
+      setLocation(user.role === "ADMIN" ? "/admin" : "/");
     }
   }, [user, setLocation]);
 
@@ -259,7 +259,7 @@ function VerifyCodeForm({ email, onBack }: { email: string; onBack: () => void }
     onSuccess: (data) => {
       if (data.success && data.user) {
         queryClient.setQueryData([api.auth.me.path], data.user);
-        setLocation("/dashboard");
+        setLocation("/");
       }
     },
   });
