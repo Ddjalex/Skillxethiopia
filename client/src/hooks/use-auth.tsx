@@ -96,10 +96,9 @@ function useLoginMutation() {
 }
 
 function useRegisterMutation() {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  return useMutation({
+  return useMutation<{ message: string }, Error, RegisterData>({
     mutationFn: async (data: RegisterData) => {
       const res = await fetch(api.auth.register.path, {
         method: "POST",
@@ -107,15 +106,17 @@ function useRegisterMutation() {
         body: JSON.stringify(data),
       });
 
+      const body = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.message || "Registration failed");
+        throw new Error(body.message || "Registration failed");
       }
-      return api.auth.register.responses[201].parse(await res.json());
+      return body;
     },
-    onSuccess: (user) => {
-      queryClient.setQueryData([api.auth.me.path], user);
-      toast({ title: "Welcome!", description: "Account created successfully" });
+    onSuccess: () => {
+      toast({
+        title: "Check your email",
+        description: "We've sent you a verification link. Please check your inbox.",
+      });
     },
     onError: (error: Error) => {
       toast({

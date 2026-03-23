@@ -17,12 +17,18 @@ import EpisodePlayer from "@/pages/episode-player";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminLoginPage from "@/pages/admin-login";
 import VideoOnly from "@/pages/video-only";
+import VerifyEmailPage from "@/pages/verify-email";
+import ForgotPasswordPage from "@/pages/forgot-password";
+import ResetPasswordPage from "@/pages/reset-password";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/auth" component={AuthPage} />
+      <Route path="/verify-email" component={VerifyEmailPage} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/browse" component={Browse} />
       <Route path="/course/:slug" component={CourseDetail} />
       <Route path="/video/:id" component={VideoOnly} />

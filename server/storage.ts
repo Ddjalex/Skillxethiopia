@@ -1,13 +1,13 @@
 import { db } from "./db";
 import {
-  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts, appSettings, courseRatings,
+  users, categories, courses, seasons, episodes, purchases, accessGrants, paymentOptions, broadcasts, appSettings, courseRatings, emailTokens,
   type User, type InsertUser, type Category, type InsertCategory,
   type Course, type InsertCourse, type Season, type InsertSeason,
   type Episode, type InsertEpisode, type Purchase, type InsertPurchase,
   type AccessGrant, type InsertAccessGrant,
   type PaymentOption, type InsertPaymentOption,
   type Broadcast, type InsertBroadcast,
-  type CourseRating
+  type CourseRating, type EmailToken
 } from "@shared/schema";
 import { eq, or, and, ilike, avg, count, sql } from "drizzle-orm";
 import session from "express-session";
@@ -88,6 +88,13 @@ export interface IStorage {
   getSetting(key: string): Promise<string | undefined>;
   setSetting(key: string, value: string): Promise<void>;
   getAllSettings(): Promise<Record<string, string>>;
+
+  // Email Tokens
+  createEmailToken(email: string, token: string, type: string, expiresAt: Date): Promise<EmailToken>;
+  getEmailToken(token: string, type: string): Promise<EmailToken | undefined>;
+  markEmailTokenUsed(id: number): Promise<void>;
+  updateUserEmailVerified(email: string): Promise<User>;
+  updateUserPassword(email: string, passwordHash: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -418,6 +425,28 @@ export class DatabaseStorage implements IStorage {
   async getAllSettings(): Promise<Record<string, string>> {
     const rows = await db.select().from(appSettings);
     return Object.fromEntries(rows.map(r => [r.key, r.value]));
+  }
+
+  // Email Tokens
+  async createEmailToken(email: string, token: string, type: string, expiresAt: Date): Promise<EmailToken> {
+    const [row] = await db.insert(emailTokens).values({ email, token, type, expiresAt }).returning();
+    return row;
+  }
+  async getEmailToken(token: string, type: string): Promise<EmailToken | undefined> {
+    const [row] = await db.select().from(emailTokens)
+      .where(and(eq(emailTokens.token, token), eq(emailTokens.type, type)));
+    return row;
+  }
+  async markEmailTokenUsed(id: number): Promise<void> {
+    await db.update(emailTokens).set({ used: true }).where(eq(emailTokens.id, id));
+  }
+  async updateUserEmailVerified(email: string): Promise<User> {
+    const [user] = await db.update(users).set({ isEmailVerified: true }).where(eq(users.email, email)).returning();
+    return user;
+  }
+  async updateUserPassword(email: string, passwordHash: string): Promise<User> {
+    const [user] = await db.update(users).set({ passwordHash }).where(eq(users.email, email)).returning();
+    return user;
   }
 }
 

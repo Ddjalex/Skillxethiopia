@@ -7,10 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, insertUserSchema } from "@shared/routes";
-import { useLocation } from "wouter";
-import { useEffect } from "react";
-import { Loader2, Sparkles, BookOpen, Users } from "lucide-react";
-import { Link } from "wouter";
+import { useLocation, Link } from "wouter";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { Loader2, Sparkles, BookOpen, Users, Eye, EyeOff, CheckCircle2, Mail } from "lucide-react";
 
 const features = [
   { icon: BookOpen, label: "Premium Courses", desc: "Hand-crafted by expert instructors" },
@@ -18,7 +18,7 @@ const features = [
 ];
 
 export default function AuthPage() {
-  const { user, loginMutation, registerMutation } = useAuth();
+  const { user } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -34,11 +34,9 @@ export default function AuthPage() {
     <div className="min-h-screen flex">
       {/* Left Panel — Brand */}
       <div className="hidden lg:flex w-[46%] flex-col bg-[#020617] text-white relative overflow-hidden p-10 xl:p-16">
-        {/* Background blobs */}
         <div className="absolute top-[-15%] left-[-10%] w-[60%] h-[60%] bg-primary/20 rounded-full blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-green-600/10 rounded-full blur-[100px] pointer-events-none" />
 
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 mb-auto">
           <div className="flex items-center justify-center h-10 w-10 rounded-xl overflow-hidden shadow-lg bg-white">
             <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
@@ -48,7 +46,6 @@ export default function AuthPage() {
           </span>
         </Link>
 
-        {/* Tagline */}
         <div className="mt-16 mb-10 space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-blue-400">
             <Sparkles className="h-3.5 w-3.5" />
@@ -66,7 +63,6 @@ export default function AuthPage() {
           </p>
         </div>
 
-        {/* Features */}
         <div className="space-y-4 mb-auto">
           {features.map(({ icon: Icon, label, desc }) => (
             <div key={label} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/5">
@@ -81,7 +77,6 @@ export default function AuthPage() {
           ))}
         </div>
 
-        {/* Footer note */}
         <p className="mt-8 text-xs text-slate-500">
           © {new Date().getFullYear()} SkillXethiopia — Elevating Ethiopian Excellence
         </p>
@@ -108,8 +103,8 @@ export default function AuthPage() {
 
           <Tabs defaultValue={defaultTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6 h-10 rounded-lg bg-secondary">
-              <TabsTrigger value="login" className="rounded-md text-sm font-semibold">Sign In</TabsTrigger>
-              <TabsTrigger value="register" className="rounded-md text-sm font-semibold">Create Account</TabsTrigger>
+              <TabsTrigger value="login" className="rounded-md text-sm font-semibold" data-testid="tab-login">Sign In</TabsTrigger>
+              <TabsTrigger value="register" className="rounded-md text-sm font-semibold" data-testid="tab-register">Create Account</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -133,6 +128,36 @@ export default function AuthPage() {
   );
 }
 
+function PasswordInput({ id, placeholder, registration, testId }: {
+  id: string;
+  placeholder: string;
+  registration: any;
+  testId?: string;
+}) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="relative">
+      <Input
+        id={id}
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        className="h-10 rounded-lg pr-10"
+        data-testid={testId}
+        {...registration}
+      />
+      <button
+        type="button"
+        onClick={() => setShow((v) => !v)}
+        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+        tabIndex={-1}
+        data-testid={`${testId}-toggle`}
+      >
+        {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+      </button>
+    </div>
+  );
+}
+
 function LoginForm() {
   const { loginMutation } = useAuth();
   const form = useForm({
@@ -149,6 +174,7 @@ function LoginForm() {
           type="email"
           placeholder="you@example.com"
           className="h-10 rounded-lg"
+          data-testid="input-login-email"
           {...form.register("email")}
         />
         {form.formState.errors.email && (
@@ -156,13 +182,21 @@ function LoginForm() {
         )}
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="login-password" className="text-sm font-semibold">Password</Label>
-        <Input
+        <div className="flex items-center justify-between">
+          <Label htmlFor="login-password" className="text-sm font-semibold">Password</Label>
+          <Link
+            href="/forgot-password"
+            className="text-xs text-primary hover:underline font-medium"
+            data-testid="link-forgot-password"
+          >
+            Forgot password?
+          </Link>
+        </div>
+        <PasswordInput
           id="login-password"
-          type="password"
           placeholder="••••••••"
-          className="h-10 rounded-lg"
-          {...form.register("password")}
+          registration={form.register("password")}
+          testId="input-login-password"
         />
         {form.formState.errors.password && (
           <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
@@ -172,6 +206,7 @@ function LoginForm() {
         type="submit"
         className="w-full h-10 rounded-lg font-semibold"
         disabled={loginMutation.isPending}
+        data-testid="button-login"
       >
         {loginMutation.isPending ? (
           <>
@@ -183,29 +218,76 @@ function LoginForm() {
         )}
       </Button>
       {loginMutation.isError && (
-        <p className="text-center text-xs text-destructive">
-          Invalid credentials. Please try again.
+        <p className="text-center text-xs text-destructive" data-testid="error-login">
+          {(loginMutation.error as Error)?.message || "Invalid credentials. Please try again."}
         </p>
       )}
     </form>
   );
 }
 
+const registerSchema = insertUserSchema.extend({
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 function RegisterForm() {
   const { registerMutation } = useAuth();
+  const [emailSent, setEmailSent] = useState(false);
+  const [sentEmail, setSentEmail] = useState("");
+
   const form = useForm({
-    resolver: zodResolver(insertUserSchema),
-    defaultValues: { name: "", email: "", password: "" },
+    resolver: zodResolver(registerSchema),
+    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
   });
 
+  const onSubmit = (data: any) => {
+    setSentEmail(data.email);
+    registerMutation.mutate(
+      { name: data.name, email: data.email, password: data.password },
+      { onSuccess: () => setEmailSent(true) }
+    );
+  };
+
+  if (emailSent) {
+    return (
+      <div className="text-center space-y-4 py-4" data-testid="register-email-sent">
+        <div className="flex justify-center">
+          <div className="h-14 w-14 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+            <Mail className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <h3 className="font-bold text-lg">Check your inbox</h3>
+          <p className="text-sm text-muted-foreground">
+            We sent a verification link to <span className="font-semibold text-foreground">{sentEmail}</span>.
+            Click the link in the email to activate your account.
+          </p>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Didn't get it?{" "}
+          <button
+            className="text-primary hover:underline font-medium"
+            onClick={() => setEmailSent(false)}
+          >
+            Try again
+          </button>
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={form.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-1.5">
         <Label htmlFor="reg-name" className="text-sm font-semibold">Full Name</Label>
         <Input
           id="reg-name"
           placeholder="Your full name"
           className="h-10 rounded-lg"
+          data-testid="input-register-name"
           {...form.register("name")}
         />
         {form.formState.errors.name && (
@@ -219,6 +301,7 @@ function RegisterForm() {
           type="email"
           placeholder="you@example.com"
           className="h-10 rounded-lg"
+          data-testid="input-register-email"
           {...form.register("email")}
         />
         {form.formState.errors.email && (
@@ -227,21 +310,33 @@ function RegisterForm() {
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="reg-password" className="text-sm font-semibold">Password</Label>
-        <Input
+        <PasswordInput
           id="reg-password"
-          type="password"
-          placeholder="Create a password"
-          className="h-10 rounded-lg"
-          {...form.register("password")}
+          placeholder="Create a password (min. 6 characters)"
+          registration={form.register("password")}
+          testId="input-register-password"
         />
         {form.formState.errors.password && (
           <p className="text-xs text-destructive">{form.formState.errors.password.message}</p>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="reg-confirm-password" className="text-sm font-semibold">Confirm Password</Label>
+        <PasswordInput
+          id="reg-confirm-password"
+          placeholder="Repeat your password"
+          registration={form.register("confirmPassword")}
+          testId="input-register-confirm-password"
+        />
+        {form.formState.errors.confirmPassword && (
+          <p className="text-xs text-destructive">{form.formState.errors.confirmPassword.message}</p>
         )}
       </div>
       <Button
         type="submit"
         className="w-full h-10 rounded-lg font-semibold"
         disabled={registerMutation.isPending}
+        data-testid="button-register"
       >
         {registerMutation.isPending ? (
           <>
@@ -253,8 +348,8 @@ function RegisterForm() {
         )}
       </Button>
       {registerMutation.isError && (
-        <p className="text-center text-xs text-destructive">
-          Registration failed. This email may already be in use.
+        <p className="text-center text-xs text-destructive" data-testid="error-register">
+          {(registerMutation.error as Error)?.message || "Registration failed. This email may already be in use."}
         </p>
       )}
     </form>

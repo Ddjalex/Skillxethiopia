@@ -21,6 +21,45 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import express from "express";
+import crypto from "crypto";
+
+// --- Brevo Email ---
+async function sendBrevoEmail(to: string, toName: string, subject: string, htmlContent: string): Promise<void> {
+  const apiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || "noreply@skillxethiopia.com";
+  const senderName = process.env.BREVO_SENDER_NAME || "SkillXethiopia";
+  if (!apiKey) {
+    console.warn("BREVO_API_KEY not set — skipping email send");
+    return;
+  }
+  try {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-key": apiKey },
+      body: JSON.stringify({
+        sender: { name: senderName, email: senderEmail },
+        to: [{ email: to, name: toName }],
+        subject,
+        htmlContent,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Brevo email send failed:", err);
+    }
+  } catch (err: any) {
+    console.error("Brevo email error:", err.message);
+  }
+}
+
+function generateToken(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function getBaseUrl(req: any): string {
+  return process.env.APP_BASE_URL || `${req.protocol}://${req.get("host")}`;
+}
 
 async function getTelegramCredentials() {
   const token = await storage.getSetting("TELEGRAM_BOT_TOKEN") || process.env.TELEGRAM_BOT_TOKEN;
@@ -349,9 +388,10 @@ export async function registerRoutes(
   passport.use(new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
     try {
       const user = await storage.getUserByEmail(email);
-      if (!user) return done(null, false);
+      if (!user) return done(null, false, { message: "invalid_credentials" });
       const isMatch = await compare(password, user.passwordHash);
-      if (!isMatch) return done(null, false);
+      if (!isMatch) return done(null, false, { message: "invalid_credentials" });
+      if (!user.isEmailVerified) return done(null, false, { message: "email_not_verified" });
       return done(null, user);
     } catch (err) {
       return done(err);
@@ -383,20 +423,47 @@ export async function registerRoutes(
     try {
       const input = api.auth.register.input.parse(req.body);
       const existing = await storage.getUserByEmail(input.email);
-      if (existing) return res.status(400).json({ message: "Email already exists" });
+      if (existing) {
+        if (!existing.isEmailVerified) {
+          // Resend verification email
+          const token = generateToken();
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+          await storage.createEmailToken(existing.email, token, "VERIFY", expiresAt);
+          const baseUrl = getBaseUrl(req);
+          const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
+          await sendBrevoEmail(existing.email, existing.name, "Verify your SkillXethiopia account", `
+            <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+              <h2>Verify your email address</h2>
+              <p>Hi ${existing.name},</p>
+              <p>Please click the button below to verify your email address and activate your account.</p>
+              <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Verify Email</a>
+              <p style="margin-top:16px;font-size:13px;color:#6b7280;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
+            </div>
+          `);
+          return res.status(200).json({ message: "verification_sent" });
+        }
+        return res.status(400).json({ message: "Email already exists" });
+      }
       
       const passwordHash = await hash(input.password, 10);
-      const user = await storage.createUser({
-        name: input.name,
-        email: input.email,
-        passwordHash,
-      });
-      
-      req.login(user, (err) => {
-        if (err) throw err;
-        const { passwordHash: _, ...userSafe } = user;
-        res.status(201).json(userSafe);
-      });
+      const user = await storage.createUser({ name: input.name, email: input.email, passwordHash });
+
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.createEmailToken(user.email, token, "VERIFY", expiresAt);
+      const baseUrl = getBaseUrl(req);
+      const verifyUrl = `${baseUrl}/verify-email?token=${token}`;
+      await sendBrevoEmail(user.email, user.name, "Verify your SkillXethiopia account", `
+        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+          <h2>Verify your email address</h2>
+          <p>Hi ${user.name},</p>
+          <p>Thanks for signing up! Please verify your email address to activate your account.</p>
+          <a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Verify Email</a>
+          <p style="margin-top:16px;font-size:13px;color:#6b7280;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
+        </div>
+      `);
+
+      res.status(201).json({ message: "verification_sent" });
     } catch (err) {
       if (err instanceof z.ZodError) {
         res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
@@ -406,9 +473,86 @@ export async function registerRoutes(
     }
   });
 
-  app.post(api.auth.login.path, passport.authenticate("local"), (req, res) => {
-    const { passwordHash: _, ...userSafe } = req.user as any;
-    res.status(200).json(userSafe);
+  app.get("/api/auth/verify-email", async (req, res) => {
+    const token = req.query.token as string;
+    if (!token) return res.status(400).json({ message: "Missing token" });
+
+    const emailToken = await storage.getEmailToken(token, "VERIFY");
+    if (!emailToken) return res.status(400).json({ message: "Invalid or expired token" });
+    if (emailToken.used) return res.status(400).json({ message: "Token already used" });
+    if (new Date() > emailToken.expiresAt) return res.status(400).json({ message: "Token has expired" });
+
+    const user = await storage.updateUserEmailVerified(emailToken.email);
+    await storage.markEmailTokenUsed(emailToken.id);
+
+    req.login(user, (err) => {
+      if (err) return res.status(500).json({ message: "Verification successful but login failed" });
+      const { passwordHash: _, ...userSafe } = user;
+      res.json({ success: true, user: userSafe });
+    });
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const user = await storage.getUserByEmail(email);
+    // Always return success to avoid email enumeration
+    if (!user || !user.isEmailVerified) {
+      return res.json({ message: "reset_sent" });
+    }
+    const token = generateToken();
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await storage.createEmailToken(user.email, token, "RESET", expiresAt);
+    const baseUrl = getBaseUrl(req);
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+    await sendBrevoEmail(user.email, user.name, "Reset your SkillXethiopia password", `
+      <div style="font-family:sans-serif;max-width:560px;margin:0 auto;">
+        <h2>Reset your password</h2>
+        <p>Hi ${user.name},</p>
+        <p>Click the button below to reset your password. This link expires in 1 hour.</p>
+        <a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Reset Password</a>
+        <p style="margin-top:16px;font-size:13px;color:#6b7280;">If you didn't request a password reset, you can safely ignore this email.</p>
+      </div>
+    `);
+    res.json({ message: "reset_sent" });
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { token, password } = z.object({ token: z.string(), password: z.string().min(6) }).parse(req.body);
+      const emailToken = await storage.getEmailToken(token, "RESET");
+      if (!emailToken) return res.status(400).json({ message: "Invalid or expired token" });
+      if (emailToken.used) return res.status(400).json({ message: "Token already used" });
+      if (new Date() > emailToken.expiresAt) return res.status(400).json({ message: "Token has expired" });
+
+      const passwordHash = await hash(password, 10);
+      await storage.updateUserPassword(emailToken.email, passwordHash);
+      await storage.markEmailTokenUsed(emailToken.id);
+
+      res.json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.post(api.auth.login.path, (req, res, next) => {
+    passport.authenticate("local", (err: any, user: any, info: any) => {
+      if (err) return next(err);
+      if (!user) {
+        const msg = info?.message === "email_not_verified"
+          ? "Please verify your email before logging in."
+          : "Invalid email or password.";
+        return res.status(401).json({ message: msg });
+      }
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        const { passwordHash: _, ...userSafe } = user;
+        res.status(200).json(userSafe);
+      });
+    })(req, res, next);
   });
 
   app.post(api.auth.logout.path, (req, res) => {

@@ -41,6 +41,17 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   role: text("role").notNull().default("USER"), // USER | ADMIN
+  isEmailVerified: boolean("is_email_verified").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const emailTokens = pgTable("email_tokens", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull(),
+  token: text("token").notNull().unique(),
+  type: text("type").notNull(), // VERIFY | RESET
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -147,6 +158,7 @@ export const insertAccessGrantSchema = createInsertSchema(accessGrants).omit({ i
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = { name: string; email: string; passwordHash: string; role?: string };
+export type EmailToken = typeof emailTokens.$inferSelect;
 export type Category = typeof categories.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
 export type Course = typeof courses.$inferSelect;
