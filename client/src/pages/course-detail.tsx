@@ -686,16 +686,7 @@ export default function CourseDetailPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
-                          {seasonLocked && (
-                            <span
-                              role="button"
-                              className="inline-flex items-center gap-1 h-7 text-xs px-3 rounded-md bg-primary text-primary-foreground font-medium cursor-pointer hover:bg-primary/90 transition-colors"
-                              onClick={(e) => { e.stopPropagation(); handleBuyInitiate("SEASON", season.id, seasonPrice); }}
-                              data-testid={`buy-season-${season.id}`}
-                            >
-                              <Lock className="w-3 h-3" /> {seasonPrice} ETB
-                            </span>
-                          )}
+                          {seasonLocked && <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
                           {seasonPending && (
                             <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5">
                               <AlertCircle className="w-3 h-3" /> Pending
@@ -709,7 +700,7 @@ export default function CourseDetailPage() {
                       {seasonLocked && (
                         <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-muted/50 mb-3 text-sm text-muted-foreground">
                           <Lock className="w-4 h-4 flex-shrink-0" />
-                          <span>Purchase this season to unlock all {season.episodes.length} episodes</span>
+                          <span>Enroll in this course to unlock all {season.episodes.length} episodes</span>
                         </div>
                       )}
                       <div className="space-y-1">
