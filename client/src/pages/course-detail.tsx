@@ -218,22 +218,34 @@ function CoursePreviewModal({
   );
 }
 
+const BUNNY_LIBRARY_ID = "617163";
+
 function VideoPreview({ course, onOpen, hasPreview }: { course: any; onOpen?: () => void; hasPreview?: boolean }) {
   if (course.introVideoRef) {
-    const src = course.introVideoProvider === "BUNNY"
-      ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://iframe.mediadelivery.net/embed/${course.introVideoRef}?autoplay=false&loop=false&muted=false&preload=true`)
-      : course.introVideoProvider === "YOUTUBE"
-        ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://www.youtube.com/embed/${course.introVideoRef}`)
-      : course.introVideoProvider === "VIMEO"
-        ? (course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://player.vimeo.com/video/${course.introVideoRef}`)
-      : course.introVideoRef;
+    let src: string;
+    if (course.introVideoProvider === "BUNNY") {
+      if (course.introVideoRef.startsWith("http")) {
+        src = course.introVideoRef;
+      } else {
+        // Normalize: if the ref has no "/" it's a bare UUID — prepend the library ID
+        const normalized = course.introVideoRef.includes("/")
+          ? course.introVideoRef
+          : `${BUNNY_LIBRARY_ID}/${course.introVideoRef}`;
+        src = `https://iframe.mediadelivery.net/embed/${normalized}?autoplay=false&loop=false&muted=false&preload=true`;
+      }
+    } else if (course.introVideoProvider === "YOUTUBE") {
+      src = course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://www.youtube.com/embed/${course.introVideoRef}`;
+    } else if (course.introVideoProvider === "VIMEO") {
+      src = course.introVideoRef.startsWith("http") ? course.introVideoRef : `https://player.vimeo.com/video/${course.introVideoRef}`;
+    } else {
+      src = course.introVideoRef;
+    }
     return (
       <iframe
         src={src}
         className="w-full h-full"
         allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
         allowFullScreen
-        referrerPolicy="no-referrer"
       />
     );
   }
@@ -383,9 +395,14 @@ export default function CourseDetailPage() {
     );
   };
 
-  // Find the lowest season price for the CTA
+  // Find the first unpurchased season for the CTA
   const firstUnlockedSeason = enrichedSeasons.find((s: any) => !s.isUnlocked && !s.isPending);
-  const ctaPrice = firstUnlockedSeason?.price || null;
+  // Fall back to course-level price when season price is "0" or missing
+  const rawSeasonPrice = firstUnlockedSeason?.price;
+  const ctaPrice = !isFree && firstUnlockedSeason
+    ? (rawSeasonPrice && rawSeasonPrice !== "0" ? rawSeasonPrice : (course.price && course.price !== "0" ? course.price : null))
+    : null;
+  const buyPrice = rawSeasonPrice && rawSeasonPrice !== "0" ? rawSeasonPrice : (course.price || "0");
 
   // Collect all preview episodes for the "Free Sample Videos" section
   const previewEpisodes: any[] = enrichedSeasons.flatMap((s: any) =>
@@ -582,7 +599,7 @@ export default function CourseDetailPage() {
                         <>
                           <Button
                             className="w-full h-11 text-base font-bold"
-                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, firstUnlockedSeason.price)}
+                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, buyPrice)}
                             disabled={buyMutation.isPending}
                           >
                             {buyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -643,7 +660,11 @@ export default function CourseDetailPage() {
               </div>
 
               <Accordion type="single" collapsible className="space-y-2">
-                {enrichedSeasons.map((season: any) => (
+                {enrichedSeasons.map((season: any) => {
+                  const seasonLocked = !isFree && !season.isUnlocked && !season.isPending;
+                  const seasonPending = !isFree && !season.isUnlocked && season.isPending;
+                  const seasonPrice = season.price && season.price !== "0" ? season.price : (course.price || "0");
+                  return (
                   <AccordionItem
                     key={season.id}
                     value={`season-${season.id}`}
@@ -653,8 +674,8 @@ export default function CourseDetailPage() {
                     <AccordionTrigger className="hover:no-underline px-5 py-4 hover:bg-secondary/50 transition-colors">
                       <div className="flex flex-1 items-center justify-between mr-4 gap-4">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-bold text-primary">
-                            {season.seasonNumber}
+                          <div className={`h-7 w-7 rounded-lg flex items-center justify-center flex-shrink-0 text-xs font-bold ${seasonLocked ? "bg-muted text-muted-foreground" : "bg-primary/10 text-primary"}`}>
+                            {seasonLocked ? <Lock className="w-3.5 h-3.5" /> : season.seasonNumber}
                           </div>
                           <div className="min-w-0 text-left">
                             <span className="font-semibold text-sm block truncate">{season.title}</span>
@@ -665,11 +686,32 @@ export default function CourseDetailPage() {
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-xs text-muted-foreground">{season.episodes.length} ep</span>
+                          {seasonLocked && (
+                            <span
+                              role="button"
+                              className="inline-flex items-center gap-1 h-7 text-xs px-3 rounded-md bg-primary text-primary-foreground font-medium cursor-pointer hover:bg-primary/90 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); handleBuyInitiate("SEASON", season.id, seasonPrice); }}
+                              data-testid={`buy-season-${season.id}`}
+                            >
+                              <Lock className="w-3 h-3" /> {seasonPrice} ETB
+                            </span>
+                          )}
+                          {seasonPending && (
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5">
+                              <AlertCircle className="w-3 h-3" /> Pending
+                            </span>
+                          )}
                         </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-5 pb-4 pt-1">
                       <Separator className="mb-3" />
+                      {seasonLocked && (
+                        <div className="flex items-center gap-2 py-3 px-3 rounded-lg bg-muted/50 mb-3 text-sm text-muted-foreground">
+                          <Lock className="w-4 h-4 flex-shrink-0" />
+                          <span>Purchase this season to unlock all {season.episodes.length} episodes</span>
+                        </div>
+                      )}
                       <div className="space-y-1">
                         {season.episodes.map((ep: any) => (
                           <div key={ep.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-secondary/60 transition-colors" data-testid={`episode-${ep.id}`}>
@@ -679,7 +721,10 @@ export default function CourseDetailPage() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                                  <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                  {seasonLocked && !ep.isPreview
+                                    ? <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                    : <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                  }
                                   {ep.title}
                                   {ep.isPreview && (
                                     <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 rounded px-1.5 py-0.5 font-medium">Preview</span>
@@ -702,25 +747,17 @@ export default function CourseDetailPage() {
                                 <span className="inline-flex items-center gap-1 text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-2 py-0.5">
                                   <AlertCircle className="w-3 h-3" /> Pending
                                 </span>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-xs gap-1"
-                                  onClick={() => handleBuyInitiate("EPISODE", ep.id, ep.price)}
-                                  disabled={buyMutation.isPending}
-                                  data-testid={`buy-ep-${ep.id}`}
-                                >
-                                  <Lock className="w-3 h-3" /> {ep.price} ETB
-                                </Button>
-                              )}
+                              ) : seasonLocked ? (
+                                <Lock className="w-3.5 h-3.5 text-muted-foreground/50" />
+                              ) : null}
                             </div>
                           </div>
                         ))}
                       </div>
                     </AccordionContent>
                   </AccordionItem>
-                ))}
+                  );
+                })}
               </Accordion>
             </section>
 
@@ -945,7 +982,7 @@ export default function CourseDetailPage() {
                         <>
                           <Button
                             className="w-full h-12 text-base font-bold"
-                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, firstUnlockedSeason.price)}
+                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, buyPrice)}
                             disabled={buyMutation.isPending}
                             data-testid="sidebar-cta"
                           >
