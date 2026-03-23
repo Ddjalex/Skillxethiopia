@@ -395,7 +395,7 @@ export async function registerRoutes(
       if (!user) return done(null, false, { message: "invalid_credentials" });
       const isMatch = await compare(password, user.passwordHash);
       if (!isMatch) return done(null, false, { message: "invalid_credentials" });
-      if (!user.isEmailVerified) return done(null, false, { message: "email_not_verified" });
+      if (!user.isEmailVerified && user.role !== "ADMIN") return done(null, false, { message: "email_not_verified" });
       return done(null, user);
     } catch (err) {
       return done(err);
