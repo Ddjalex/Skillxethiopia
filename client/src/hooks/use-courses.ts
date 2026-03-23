@@ -114,7 +114,7 @@ export function useBuyItem() {
   
   return useMutation({
     mutationFn: async ({ itemType, itemId, amount, transactionRef, paymentProofUrl }: { 
-      itemType: "SEASON" | "EPISODE", 
+      itemType: "SEASON" | "EPISODE" | "COURSE", 
       itemId: number, 
       amount: string,
       transactionRef: string,

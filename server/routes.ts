@@ -440,12 +440,21 @@ export async function registerRoutes(
   async function getUsersEnrolledInCourse(courseId: number) {
     const courseSeasons = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.courseId, courseId));
     const seasonIds = courseSeasons.map(s => s.id);
-    if (!seasonIds.length) return [];
-    const grants = await db.select({ userId: accessGrants.userId }).from(accessGrants)
-      .where(and(eq(accessGrants.itemType, "SEASON"), inArray(accessGrants.itemId, seasonIds)));
-    const paid = await db.select({ userId: purchases.userId }).from(purchases)
-      .where(and(eq(purchases.itemType, "SEASON"), inArray(purchases.itemId, seasonIds), eq(purchases.status, "PAID")));
-    const ids = [...new Set([...grants.map(g => g.userId), ...paid.map(p => p.userId)])];
+    // COURSE-level grants/purchases
+    const courseGrants = await db.select({ userId: accessGrants.userId }).from(accessGrants)
+      .where(and(eq(accessGrants.itemType, "COURSE"), eq(accessGrants.itemId, courseId)));
+    const coursePaid = await db.select({ userId: purchases.userId }).from(purchases)
+      .where(and(eq(purchases.itemType, "COURSE"), eq(purchases.itemId, courseId), eq(purchases.status, "PAID")));
+    const seasonGrants = seasonIds.length ? await db.select({ userId: accessGrants.userId }).from(accessGrants)
+      .where(and(eq(accessGrants.itemType, "SEASON"), inArray(accessGrants.itemId, seasonIds))) : [];
+    const seasonPaid = seasonIds.length ? await db.select({ userId: purchases.userId }).from(purchases)
+      .where(and(eq(purchases.itemType, "SEASON"), inArray(purchases.itemId, seasonIds), eq(purchases.status, "PAID"))) : [];
+    const ids = [...new Set([
+      ...courseGrants.map(g => g.userId),
+      ...coursePaid.map(p => p.userId),
+      ...seasonGrants.map(g => g.userId),
+      ...seasonPaid.map(p => p.userId)
+    ])];
     if (!ids.length) return [];
     return db.select().from(users).where(and(inArray(users.id, ids), eq(users.isEmailVerified, true)));
   }
@@ -697,16 +706,48 @@ export async function registerRoutes(
     
     const isFree = course.priceStrategy === "FREE";
     const seasons = await storage.getSeasonsByCourse(course.id);
+
+    // Check if user has paid for the entire course (COURSE-level access grant)
+    const courseGrant = await db.select().from(accessGrants).where(
+      and(
+        eq(accessGrants.userId, userId),
+        eq(accessGrants.itemType, "COURSE"),
+        eq(accessGrants.itemId, course.id)
+      )
+    ).limit(1);
+    const hasCourseAccess = courseGrant.length > 0;
+
+    // Check if user has a pending COURSE-level purchase
+    const coursePendingRows = hasCourseAccess ? [] : await db.select().from(purchases).where(
+      and(
+        eq(purchases.userId, userId),
+        eq(purchases.itemType, "COURSE"),
+        eq(purchases.itemId, course.id),
+        eq(purchases.status, "PENDING")
+      )
+    ).limit(1);
+    const isCoursePending = coursePendingRows.length > 0;
+
     const seasonsWithEpisodes = await Promise.all(seasons.map(async s => {
       const eps = await storage.getEpisodesBySeason(s.id);
       
-      // Free courses: all content is unlocked
-      if (isFree) {
+      // Free courses or users with full course access: all content is unlocked
+      if (isFree || hasCourseAccess) {
         return {
           ...s,
           isUnlocked: true,
           isPending: false,
           episodes: eps.map(e => ({ ...e, isUnlocked: true, isPending: false }))
+        };
+      }
+
+      // User has a pending course-level purchase: show pending for all seasons
+      if (isCoursePending) {
+        return {
+          ...s,
+          isUnlocked: false,
+          isPending: true,
+          episodes: eps.map(e => ({ ...e, isUnlocked: false, isPending: true }))
         };
       }
 
@@ -823,6 +864,7 @@ export async function registerRoutes(
         const episodeIds = new Set(courseEpisodes.map(e => e.id));
         const seasonIdSet = new Set(seasonIds);
         hasPurchase = paid.some(p =>
+          (p.itemType === "COURSE" && p.itemId === courseId) ||
           (p.itemType === "SEASON" && seasonIdSet.has(p.itemId)) ||
           (p.itemType === "EPISODE" && episodeIds.has(p.itemId))
         );
@@ -872,14 +914,26 @@ export async function registerRoutes(
       hasAccess = true;
     }
 
-    if (!hasAccess) {
+    // Fetch the season to get courseId (used for FREE check and COURSE grant check)
+    const [episodeSeason] = await db.select().from(seasons).where(eq(seasons.id, episode.seasonId)).limit(1);
+
+    if (!hasAccess && episodeSeason) {
       // Check if the course is FREE — free courses are always accessible
-      const season = await db.select().from(seasons).where(eq(seasons.id, episode.seasonId)).limit(1);
-      if (season.length > 0) {
-        const course = await storage.getCourse(season[0].courseId);
-        if (course?.priceStrategy === "FREE") {
-          hasAccess = true;
-        }
+      const course = await storage.getCourse(episodeSeason.courseId);
+      if (course?.priceStrategy === "FREE") {
+        hasAccess = true;
+      }
+
+      // Check COURSE-level access grant (user paid for the entire course)
+      if (!hasAccess) {
+        const courseGrant = await db.select().from(accessGrants).where(
+          and(
+            eq(accessGrants.userId, userId),
+            eq(accessGrants.itemType, "COURSE"),
+            eq(accessGrants.itemId, episodeSeason.courseId)
+          )
+        ).limit(1);
+        if (courseGrant.length > 0) hasAccess = true;
       }
     }
 
@@ -1091,9 +1145,11 @@ export async function registerRoutes(
     allCourses.forEach(c => { courseStatMap[c.id] = { purchaseCount: 0, buyers: new Set(), revenue: 0 }; });
 
     paidPurchases.forEach(({ purchase }) => {
-      const courseId = purchase.itemType === "SEASON"
-        ? seasonToCourse[purchase.itemId]
-        : episodeToCourse[purchase.itemId];
+      const courseId = purchase.itemType === "COURSE"
+        ? purchase.itemId
+        : purchase.itemType === "SEASON"
+          ? seasonToCourse[purchase.itemId]
+          : episodeToCourse[purchase.itemId];
       if (courseId && courseStatMap[courseId]) {
         courseStatMap[courseId].purchaseCount++;
         courseStatMap[courseId].buyers.add(purchase.userId);
@@ -1117,9 +1173,11 @@ export async function registerRoutes(
 
     paidPurchases.forEach(({ purchase }) => {
       if (!userStatMap[purchase.userId]) return;
-      const courseId = purchase.itemType === "SEASON"
-        ? seasonToCourse[purchase.itemId]
-        : episodeToCourse[purchase.itemId];
+      const courseId = purchase.itemType === "COURSE"
+        ? purchase.itemId
+        : purchase.itemType === "SEASON"
+          ? seasonToCourse[purchase.itemId]
+          : episodeToCourse[purchase.itemId];
       userStatMap[purchase.userId].purchaseCount++;
       if (courseId) userStatMap[purchase.userId].courses.add(courseId);
       userStatMap[purchase.userId].totalSpent += parseFloat(purchase.amount) || 0;

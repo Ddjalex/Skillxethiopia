@@ -15,7 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 interface PaymentPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  itemType: "SEASON" | "EPISODE";
+  itemType: "SEASON" | "EPISODE" | "COURSE";
   itemId: number;
   amount: string;
   onConfirm: (transactionRef: string, paymentProofUrl?: string) => void;

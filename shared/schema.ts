@@ -105,7 +105,7 @@ export const episodes = pgTable("episodes", {
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  itemType: text("item_type").notNull(), // SEASON | EPISODE
+  itemType: text("item_type").notNull(), // COURSE | SEASON | EPISODE
   itemId: integer("item_id").notNull(),
   amount: text("amount").notNull(),
   currency: text("currency").notNull().default("ETB"),
@@ -119,7 +119,7 @@ export const purchases = pgTable("purchases", {
 export const accessGrants = pgTable("access_grants", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  itemType: text("item_type").notNull(), // SEASON | EPISODE
+  itemType: text("item_type").notNull(), // COURSE | SEASON | EPISODE
   itemId: integer("item_id").notNull(),
   grantedBy: text("granted_by").notNull().default("SYSTEM"), // SYSTEM | ADMIN
   createdAt: timestamp("created_at").defaultNow(),

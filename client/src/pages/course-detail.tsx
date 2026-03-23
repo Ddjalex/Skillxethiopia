@@ -297,7 +297,7 @@ export default function CourseDetailPage() {
 
   const [paymentState, setPaymentState] = useState<{
     isOpen: boolean;
-    itemType: "SEASON" | "EPISODE" | null;
+    itemType: "SEASON" | "EPISODE" | "COURSE" | null;
     itemId: number | null;
     amount: string;
   }>({ isOpen: false, itemType: null, itemId: null, amount: "" });
@@ -377,7 +377,7 @@ export default function CourseDetailPage() {
   const hasInstructor = !!(courseAny.instructorImageUrl || courseAny.instructorBio);
   const hasPurchasedAnything = enrichedSeasons.some((s: any) => s.isUnlocked || s.episodes.some((e: any) => e.isUnlocked));
 
-  const handleBuyInitiate = (itemType: "SEASON" | "EPISODE", itemId: number, amount: string) => {
+  const handleBuyInitiate = (itemType: "SEASON" | "EPISODE" | "COURSE", itemId: number, amount: string) => {
     if (!user) { window.location.href = "/auth"; return; }
     setPaymentState({ isOpen: true, itemType, itemId, amount });
   };
@@ -599,7 +599,7 @@ export default function CourseDetailPage() {
                         <>
                           <Button
                             className="w-full h-11 text-base font-bold"
-                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, buyPrice)}
+                            onClick={() => course && handleBuyInitiate("COURSE", course.id, buyPrice)}
                             disabled={buyMutation.isPending}
                           >
                             {buyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
@@ -982,7 +982,7 @@ export default function CourseDetailPage() {
                         <>
                           <Button
                             className="w-full h-12 text-base font-bold"
-                            onClick={() => firstUnlockedSeason && handleBuyInitiate("SEASON", firstUnlockedSeason.id, buyPrice)}
+                            onClick={() => course && handleBuyInitiate("COURSE", course.id, buyPrice)}
                             disabled={buyMutation.isPending}
                             data-testid="sidebar-cta"
                           >
