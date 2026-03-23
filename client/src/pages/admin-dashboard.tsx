@@ -11,7 +11,7 @@ import {
   ChevronRight, ShieldCheck, TrendingUp, Menu, X,
   Download, BarChart2, ShoppingCart, Megaphone, Tag,
   Flame, Sparkles, Send, CheckCircle2, AlertCircle, ToggleLeft, ToggleRight,
-  Eye, EyeOff, Play, Wifi, Clock, Film, AlertTriangle, KeyRound, Save
+  Eye, EyeOff, Play, Wifi, Clock, Film, AlertTriangle, KeyRound, Save, LogOut
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { queryClient } from "@/lib/queryClient";
@@ -34,7 +34,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import ReactPlayer from "react-player";
 import { insertCourseSchema, insertCategorySchema, insertEpisodeSchema, insertSeasonSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 
 const BUNNY_LIBRARY_ID = "617163";
@@ -166,10 +166,22 @@ const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
 
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const logoutMutation = useMutation({
+    mutationFn: () => apiRequest("POST", api.auth.logout.path),
+    onSuccess: () => {
+      queryClient.clear();
+      navigate("/admin/login");
+    },
+    onError: () => {
+      toast({ title: "Logout failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
 
   const { data: users, isLoading: loadingUsers } = useQuery<any[]>({ queryKey: ["/api/admin/users"] });
   const { data: categories, isLoading: loadingCategories } = useQuery<any[]>({ queryKey: ["/api/categories"] });
@@ -226,13 +238,26 @@ export default function AdminDashboard() {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-border">
+        <div className="px-3 py-4 border-t border-border space-y-0.5">
           <Link href="/">
             <button className="sidebar-nav-item w-full text-muted-foreground">
               <ChevronRight className="h-4 w-4 rotate-180" />
               Back to Site
             </button>
           </Link>
+          <button
+            data-testid="button-admin-logout"
+            className="sidebar-nav-item w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            {logoutMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <LogOut className="h-4 w-4" />
+            )}
+            Logout
+          </button>
         </div>
       </aside>
 
