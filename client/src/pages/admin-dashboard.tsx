@@ -34,7 +34,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import ReactPlayer from "react-player";
 import { insertCourseSchema, insertCategorySchema, insertEpisodeSchema, insertSeasonSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { Link, useLocation } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
 import { cn } from "@/lib/utils";
 
 const BUNNY_LIBRARY_ID = "617163";
@@ -166,22 +167,11 @@ const sidebarNav: { id: AdminTab; label: string; icon: any }[] = [
 
 export default function AdminDashboard() {
   const { toast } = useToast();
-  const [, navigate] = useLocation();
+  const { logoutMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>("overview");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  const logoutMutation = useMutation({
-    mutationFn: () => apiRequest("POST", api.auth.logout.path),
-    onSuccess: () => {
-      queryClient.clear();
-      navigate("/admin/login");
-    },
-    onError: () => {
-      toast({ title: "Logout failed", description: "Please try again.", variant: "destructive" });
-    },
-  });
 
   const { data: users, isLoading: loadingUsers } = useQuery<any[]>({ queryKey: ["/api/admin/users"] });
   const { data: categories, isLoading: loadingCategories } = useQuery<any[]>({ queryKey: ["/api/categories"] });
