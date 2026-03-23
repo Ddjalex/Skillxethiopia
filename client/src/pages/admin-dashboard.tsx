@@ -2463,36 +2463,18 @@ function AdminSettings() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
 
-  const [emailChangeStep, setEmailChangeStep] = useState<"idle" | "code_sent">("idle");
   const [newEmail, setNewEmail] = useState("");
   const [emailCurrentPassword, setEmailCurrentPassword] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
 
-  const requestEmailChange = useMutation({
+  const changeEmail = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/change-email/request", { newEmail, currentPassword: emailCurrentPassword });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
-      return res.json();
-    },
-    onSuccess: () => {
-      setEmailChangeStep("code_sent");
-      toast({ title: "Code sent", description: `A verification code was sent to ${newEmail}.` });
-    },
-    onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
-  });
-
-  const verifyEmailChange = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/admin/change-email/verify", { code: verificationCode });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+      const res = await apiRequest("POST", "/api/admin/change-email", { newEmail, currentPassword: emailCurrentPassword });
       return res.json();
     },
     onSuccess: (data) => {
       toast({ title: "Email updated", description: `Your login email is now ${data.newEmail}. Please log in again.` });
-      setEmailChangeStep("idle");
       setNewEmail("");
       setEmailCurrentPassword("");
-      setVerificationCode("");
       setTimeout(() => logoutMutation.mutate(), 1500);
     },
     onError: (err: any) => toast({ title: "Error", description: err.message, variant: "destructive" }),
@@ -2842,87 +2824,44 @@ function AdminSettings() {
         <div>
           <p className="font-semibold text-sm mb-0.5">Change Email</p>
           <p className="text-xs text-muted-foreground">
-            Current email: <span className="font-medium text-foreground">{user?.email}</span>
+            Current login email: <span className="font-medium text-foreground">{user?.email}</span>
           </p>
         </div>
-
-        {emailChangeStep === "idle" ? (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>New Email Address</Label>
-              <Input
-                type="email"
-                className="h-10"
-                placeholder="new@example.com"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                data-testid="input-new-email"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Current Password (to confirm)</Label>
-              <Input
-                type="password"
-                className="h-10"
-                value={emailCurrentPassword}
-                onChange={(e) => setEmailCurrentPassword(e.target.value)}
-                data-testid="input-email-current-password"
-              />
-            </div>
-            <Button
-              className="w-full"
-              onClick={() => requestEmailChange.mutate()}
-              disabled={requestEmailChange.isPending || !newEmail || !emailCurrentPassword}
-              data-testid="button-request-email-change"
-            >
-              {requestEmailChange.isPending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending code...</>
-              ) : (
-                "Send Verification Code"
-              )}
-            </Button>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>New Email Address</Label>
+            <Input
+              type="email"
+              className="h-10"
+              placeholder="new@example.com"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              data-testid="input-new-email"
+            />
           </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              A 6-digit code was sent to <span className="font-medium text-foreground">{newEmail}</span>. Enter it below to confirm your new email.
-            </p>
-            <div className="space-y-1.5">
-              <Label>Verification Code</Label>
-              <Input
-                type="text"
-                className="h-10 text-center tracking-widest text-lg font-mono"
-                placeholder="000000"
-                maxLength={6}
-                value={verificationCode}
-                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                data-testid="input-email-verification-code"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => { setEmailChangeStep("idle"); setVerificationCode(""); }}
-                data-testid="button-cancel-email-change"
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={() => verifyEmailChange.mutate()}
-                disabled={verifyEmailChange.isPending || verificationCode.length !== 6}
-                data-testid="button-verify-email-change"
-              >
-                {verifyEmailChange.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</>
-                ) : (
-                  "Confirm New Email"
-                )}
-              </Button>
-            </div>
+          <div className="space-y-1.5">
+            <Label>Current Password (to confirm)</Label>
+            <Input
+              type="password"
+              className="h-10"
+              value={emailCurrentPassword}
+              onChange={(e) => setEmailCurrentPassword(e.target.value)}
+              data-testid="input-email-current-password"
+            />
           </div>
-        )}
+          <Button
+            className="w-full"
+            onClick={() => changeEmail.mutate()}
+            disabled={changeEmail.isPending || !newEmail || !emailCurrentPassword}
+            data-testid="button-change-email"
+          >
+            {changeEmail.isPending ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Updating email...</>
+            ) : (
+              "Update Email"
+            )}
+          </Button>
+        </div>
       </div>
     </div>
   );

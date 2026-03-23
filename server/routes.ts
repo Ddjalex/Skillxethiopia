@@ -332,12 +332,12 @@ function normalizeChannelId(id: string | undefined): string | undefined {
 
 async function getChannelCredentials(): Promise<{ token: string | undefined; channelId: string | undefined }> {
   const token = (await storage.getSetting("TELEGRAM_BOT_TOKEN")) || process.env.TELEGRAM_BOT_TOKEN;
-  // TELEGRAM_CHAT_ID holds the channel ID (set by auto-detect). TELEGRAM_CHANNEL_ID is an optional override.
+  // For channel broadcasts: prefer TELEGRAM_CHANNEL_ID (the public channel) over TELEGRAM_CHAT_ID (personal/notification chat)
   const rawChannelId =
-    (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
-    process.env.TELEGRAM_CHAT_ID ||
     (await storage.getSetting("TELEGRAM_CHANNEL_ID")) ||
-    process.env.TELEGRAM_CHANNEL_ID;
+    process.env.TELEGRAM_CHANNEL_ID ||
+    (await storage.getSetting("TELEGRAM_CHAT_ID")) ||
+    process.env.TELEGRAM_CHAT_ID;
   return { token, channelId: normalizeChannelId(rawChannelId) };
 }
 
@@ -1011,10 +1011,7 @@ export async function registerRoutes(
     res.json({ success: true });
   });
 
-  // In-memory store for pending admin email changes
-  const pendingAdminEmailChanges = new Map<number, { code: string; newEmail: string; expiresAt: number }>();
-
-  app.post("/api/admin/change-email/request", requireAdmin, async (req, res) => {
+  app.post("/api/admin/change-email", requireAdmin, async (req, res) => {
     try {
       const { newEmail, currentPassword } = z.object({ newEmail: z.string().email(), currentPassword: z.string().min(1) }).parse(req.body);
       const adminId = (req.user as any).id;
@@ -1025,45 +1022,13 @@ export async function registerRoutes(
       if (!isMatch) return res.status(400).json({ message: "Incorrect current password" });
 
       const existing = await storage.getUserByEmail(newEmail);
-      if (existing && existing.id !== adminId) return res.status(400).json({ message: "Email already in use" });
+      if (existing && existing.id !== adminId) return res.status(400).json({ message: "Email already in use by another account" });
 
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 10 * 60 * 1000;
-      pendingAdminEmailChanges.set(adminId, { code, newEmail, expiresAt });
-
-      await sendBrevoEmail(newEmail, user.name, "Verify your new admin email — SkillXethiopia", `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px 24px;background:#ffffff;">
-          <h2 style="margin-bottom:8px;font-size:22px;color:#111827;">Verify your new email address</h2>
-          <p style="color:#4b5563;margin-bottom:24px;">Hi ${user.name}, you requested to change your admin email to <strong>${newEmail}</strong>. Use the code below to confirm. This code expires in 10 minutes.</p>
-          <div style="display:inline-block;padding:16px 40px;background:#f3f4f6;border-radius:12px;font-size:36px;font-weight:700;letter-spacing:10px;color:#111827;margin-bottom:24px;">${code}</div>
-          <p style="font-size:13px;color:#9ca3af;">If you did not request this change, you can safely ignore this email.</p>
-        </div>
-      `);
-      res.json({ success: true });
+      await db.update(users).set({ email: newEmail }).where(eq(users.id, adminId));
+      res.json({ success: true, newEmail });
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
-      res.status(500).json({ message: "Failed to send verification code" });
-    }
-  });
-
-  app.post("/api/admin/change-email/verify", requireAdmin, async (req, res) => {
-    try {
-      const { code } = z.object({ code: z.string().min(1) }).parse(req.body);
-      const adminId = (req.user as any).id;
-      const pending = pendingAdminEmailChanges.get(adminId);
-      if (!pending) return res.status(400).json({ message: "No pending email change. Please request a new code." });
-      if (Date.now() > pending.expiresAt) {
-        pendingAdminEmailChanges.delete(adminId);
-        return res.status(400).json({ message: "Verification code expired. Please request a new one." });
-      }
-      if (pending.code !== code.trim()) return res.status(400).json({ message: "Invalid verification code" });
-
-      await db.update(users).set({ email: pending.newEmail }).where(eq(users.id, adminId));
-      pendingAdminEmailChanges.delete(adminId);
-      res.json({ success: true, newEmail: pending.newEmail });
-    } catch (err) {
-      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
-      res.status(500).json({ message: "Failed to verify email change" });
+      res.status(500).json({ message: "Failed to change email" });
     }
   });
 
