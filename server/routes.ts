@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { db, pool } from "./db";
-import { eq, or, and, ilike } from "drizzle-orm";
+import { eq, or, and, ilike, ne, inArray } from "drizzle-orm";
 import {
   users, categories, courses, seasons, episodes, purchases, accessGrants,
   type InsertUser, type Category, type InsertCategory,
@@ -421,6 +421,40 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || req.user.role !== "ADMIN") return res.status(403).json({ message: "Forbidden" });
     next();
   };
+
+  // --- Enrollment Notification Helpers ---
+  async function getVerifiedStudents() {
+    return db.select().from(users).where(and(eq(users.isEmailVerified, true), ne(users.role, "ADMIN")));
+  }
+
+  async function getUsersEnrolledInSeason(seasonId: number) {
+    const grants = await db.select({ userId: accessGrants.userId }).from(accessGrants)
+      .where(and(eq(accessGrants.itemType, "SEASON"), eq(accessGrants.itemId, seasonId)));
+    const paid = await db.select({ userId: purchases.userId }).from(purchases)
+      .where(and(eq(purchases.itemType, "SEASON"), eq(purchases.itemId, seasonId), eq(purchases.status, "PAID")));
+    const ids = [...new Set([...grants.map(g => g.userId), ...paid.map(p => p.userId)])];
+    if (!ids.length) return [];
+    return db.select().from(users).where(and(inArray(users.id, ids), eq(users.isEmailVerified, true)));
+  }
+
+  async function getUsersEnrolledInCourse(courseId: number) {
+    const courseSeasons = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.courseId, courseId));
+    const seasonIds = courseSeasons.map(s => s.id);
+    if (!seasonIds.length) return [];
+    const grants = await db.select({ userId: accessGrants.userId }).from(accessGrants)
+      .where(and(eq(accessGrants.itemType, "SEASON"), inArray(accessGrants.itemId, seasonIds)));
+    const paid = await db.select({ userId: purchases.userId }).from(purchases)
+      .where(and(eq(purchases.itemType, "SEASON"), inArray(purchases.itemId, seasonIds), eq(purchases.status, "PAID")));
+    const ids = [...new Set([...grants.map(g => g.userId), ...paid.map(p => p.userId)])];
+    if (!ids.length) return [];
+    return db.select().from(users).where(and(inArray(users.id, ids), eq(users.isEmailVerified, true)));
+  }
+
+  function sendBulkEmails(recipients: { email: string; name: string }[], subject: string, html: string) {
+    for (const r of recipients) {
+      sendBrevoEmail(r.email, r.name, subject, html).catch(() => {});
+    }
+  }
 
   // --- Auth Routes ---
   async function sendVerificationCode(email: string, name: string, code: string): Promise<void> {
@@ -921,14 +955,73 @@ export async function registerRoutes(
   app.post(api.admin.createCourse.path, requireAdmin, async (req, res) => {
     const created = await storage.createCourse(req.body);
     res.status(201).json(created);
+    // Notify all verified students about the new course (fire-and-forget)
+    getVerifiedStudents().then(recipients => {
+      if (!recipients.length) return;
+      const html = `
+        <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+          <h2 style="font-size:22px;color:#111827;margin-bottom:8px;">🎉 New Course Available!</h2>
+          <p style="color:#4b5563;margin-bottom:16px;">A brand new course has just been added to SkillXethiopia:</p>
+          <div style="background:#f9fafb;border-radius:12px;padding:20px 24px;margin-bottom:24px;border:1px solid #e5e7eb;">
+            <p style="font-size:20px;font-weight:700;color:#111827;margin:0 0 4px;">${created.title}</p>
+            ${created.instructorName ? `<p style="color:#6b7280;margin:0 0 8px;font-size:14px;">by ${created.instructorName}</p>` : ""}
+            ${created.description ? `<p style="color:#4b5563;font-size:14px;margin:0;">${created.description}</p>` : ""}
+          </div>
+          <p style="color:#6b7280;font-size:13px;">Log in to your SkillXethiopia account to explore this new course.</p>
+        </div>`;
+      sendBulkEmails(recipients, `New Course: ${created.title} — SkillXethiopia`, html);
+    }).catch(() => {});
   });
   app.post(api.admin.createSeason.path, requireAdmin, async (req, res) => {
     const created = await storage.createSeason(req.body);
     res.status(201).json(created);
+    // Notify users already enrolled in this course about the new season
+    getUsersEnrolledInCourse(created.courseId).then(async recipients => {
+      if (!recipients.length) return;
+      const course = await storage.getCourse(created.courseId);
+      if (!course) return;
+      const html = `
+        <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+          <h2 style="font-size:22px;color:#111827;margin-bottom:8px;">📚 New Session Added!</h2>
+          <p style="color:#4b5563;margin-bottom:16px;">A new session has been added to a course you're enrolled in:</p>
+          <div style="background:#f9fafb;border-radius:12px;padding:20px 24px;margin-bottom:24px;border:1px solid #e5e7eb;">
+            <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">Course</p>
+            <p style="font-size:18px;font-weight:700;color:#111827;margin:0 0 12px;">${course.title}</p>
+            <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">New Session</p>
+            <p style="font-size:16px;font-weight:600;color:#111827;margin:0;">Session ${created.seasonNumber}: ${created.title}</p>
+          </div>
+          <p style="color:#6b7280;font-size:13px;">Log in to your SkillXethiopia dashboard to access the new content.</p>
+        </div>`;
+      sendBulkEmails(recipients, `New Session in ${course.title} — SkillXethiopia`, html);
+    }).catch(() => {});
   });
   app.post(api.admin.createEpisode.path, requireAdmin, async (req, res) => {
     const created = await storage.createEpisode(req.body);
     res.status(201).json(created);
+    // Notify users enrolled in the episode's season about the new episode
+    getUsersEnrolledInSeason(created.seasonId).then(async recipients => {
+      if (!recipients.length) return;
+      const [season] = await db.select().from(seasons).where(eq(seasons.id, created.seasonId));
+      if (!season) return;
+      const course = await storage.getCourse(season.courseId);
+      if (!course) return;
+      const html = `
+        <div style="font-family:sans-serif;max-width:580px;margin:0 auto;padding:32px 24px;background:#ffffff;">
+          <h2 style="font-size:22px;color:#111827;margin-bottom:8px;">🎬 New Episode Available!</h2>
+          <p style="color:#4b5563;margin-bottom:16px;">A new episode has been added to a course you're enrolled in:</p>
+          <div style="background:#f9fafb;border-radius:12px;padding:20px 24px;margin-bottom:24px;border:1px solid #e5e7eb;">
+            <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">Course</p>
+            <p style="font-size:16px;font-weight:700;color:#111827;margin:0 0 10px;">${course.title}</p>
+            <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">Session</p>
+            <p style="font-size:14px;color:#374151;margin:0 0 10px;">Session ${season.seasonNumber}: ${season.title}</p>
+            <p style="font-size:13px;color:#6b7280;margin:0 0 2px;">New Episode</p>
+            <p style="font-size:16px;font-weight:600;color:#111827;margin:0;">Ep ${created.episodeNumber}: ${created.title}</p>
+            ${created.description ? `<p style="color:#6b7280;font-size:13px;margin:8px 0 0;">${created.description}</p>` : ""}
+          </div>
+          <p style="color:#6b7280;font-size:13px;">Log in to your SkillXethiopia dashboard to watch it now.</p>
+        </div>`;
+      sendBulkEmails(recipients, `New Episode: ${created.title} — SkillXethiopia`, html);
+    }).catch(() => {});
   });
 
   app.put(api.admin.updateCategory.path, requireAdmin, async (req, res) => {
