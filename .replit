@@ -49,3 +49,5 @@ expertMode = true
 [userenv.shared]
 TELEGRAM_BOT_TOKEN = "8771213131:AAHLVVi6uPuWpY-O2d1ISBqIOWJpMbzT4mw"
 TELEGRAM_CHAT_ID = "383870190"
+BREVO_SENDER_EMAIL = "noreply@skillxethiopia.com"
+BREVO_SENDER_NAME = "SkillXethiopia"
