@@ -1748,10 +1748,6 @@ function EditCourseDialog({ course, categories }: { course: any; categories: any
                             <Input type="number" {...seasonForm.register("seasonNumber", { valueAsNumber: true })} className="h-9 text-sm" />
                           </div>
                           <div className="space-y-1">
-                            <Label className="text-xs">Price (ETB)</Label>
-                            <Input {...seasonForm.register("price")} placeholder="0" className="h-9 text-sm" />
-                          </div>
-                          <div className="space-y-1">
                             <Label className="text-xs">Instructor Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
                             <Input {...seasonForm.register("instructorName")} placeholder="Leave blank to use course instructor" className="h-9 text-sm" />
                           </div>
