@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
+import { useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -22,6 +23,14 @@ import VerifyEmailPage from "@/pages/verify-email";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
 
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [location]);
+  return null;
+}
+
 function NotificationListener() {
   useNotifications();
   return null;
@@ -29,27 +38,30 @@ function NotificationListener() {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/verify-email" component={VerifyEmailPage} />
-      <Route path="/forgot-password" component={ForgotPasswordPage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/browse" component={Browse} />
-      <Route path="/course/:slug" component={CourseDetail} />
-      <Route path="/video/:id" component={VideoOnly} />
-      
-      {/* Protected User Routes */}
-      <ProtectedRoute path="/dashboard" component={Dashboard} />
-      <ProtectedRoute path="/dashboard/course/:id" component={DashboardCourse} />
-      <ProtectedRoute path="/dashboard/course/:courseId/episode/:episodeId" component={EpisodePlayer} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin/login" component={AdminLoginPage} />
-      <ProtectedRoute path="/admin" component={AdminDashboard} adminOnly />
-      
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <ScrollToTop />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/auth" component={AuthPage} />
+        <Route path="/verify-email" component={VerifyEmailPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/browse" component={Browse} />
+        <Route path="/course/:slug" component={CourseDetail} />
+        <Route path="/video/:id" component={VideoOnly} />
+        
+        {/* Protected User Routes */}
+        <ProtectedRoute path="/dashboard" component={Dashboard} />
+        <ProtectedRoute path="/dashboard/course/:id" component={DashboardCourse} />
+        <ProtectedRoute path="/dashboard/course/:courseId/episode/:episodeId" component={EpisodePlayer} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin/login" component={AdminLoginPage} />
+        <ProtectedRoute path="/admin" component={AdminDashboard} adminOnly />
+        
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

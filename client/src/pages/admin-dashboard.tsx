@@ -199,7 +199,7 @@ export default function AdminDashboard() {
         mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Logo */}
-        <div className="flex items-center gap-2.5 px-5 h-16 border-b border-border flex-shrink-0">
+        <a href="/" className="flex items-center gap-2.5 px-5 h-16 border-b border-border flex-shrink-0 hover:opacity-80 transition-opacity">
           <div className="flex items-center justify-center h-8 w-8 rounded-lg overflow-hidden bg-white">
             <img src={logoImg} alt="SkillXethiopia" className="h-full w-full object-contain" />
           </div>
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
             <p className="font-bold text-sm leading-none"><span style={{ color: "#078930" }}>Skill</span><span style={{ color: "#FCDD09" }}>X</span><span style={{ color: "#DA121A" }}>ethiopia</span></p>
             <p className="text-[10px] text-muted-foreground mt-0.5">Admin Panel</p>
           </div>
-        </div>
+        </a>
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
