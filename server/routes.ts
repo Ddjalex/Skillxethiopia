@@ -787,7 +787,8 @@ export async function registerRoutes(
         isPending: seasonPending.length > 0,
         episodes: await Promise.all(eps.map(async e => {
           // Check if individual episode is unlocked (either via season or directly)
-          let isEpisodeUnlocked = isSeasonUnlocked || e.isPreview;
+          // isPreview is for Telegram only — website access is controlled by price field
+          let isEpisodeUnlocked = isSeasonUnlocked || e.price === "0";
           let isEpisodePending = false;
           
           if (!isEpisodeUnlocked) {
@@ -903,14 +904,15 @@ export async function registerRoutes(
     const episode = await storage.getEpisode(episodeId);
     if (!episode) return res.status(404).json({ message: "Not found" });
 
-    // Preview episodes are freely accessible without login or purchase
-    if (episode.isPreview) {
-      return res.json({ videoProvider: episode.videoProvider, videoRef: episode.videoRef });
-    }
-
-    // All other episodes require authentication
+    // All episodes require authentication first
+    // NOTE: isPreview is only used for Telegram broadcasting, NOT for website access control
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Episodes with price="0" (Free access) are accessible to any logged-in user without payment
+    if (episode.price === "0") {
+      return res.json({ videoProvider: episode.videoProvider, videoRef: episode.videoRef });
     }
 
     const userId = (req.user as any).id;

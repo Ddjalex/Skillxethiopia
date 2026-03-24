@@ -404,9 +404,10 @@ export default function CourseDetailPage() {
     : null;
   const buyPrice = rawSeasonPrice && rawSeasonPrice !== "0" ? rawSeasonPrice : (course.price || "0");
 
-  // Collect all preview episodes for the "Free Sample Videos" section
+  // Collect free episodes (price="0") for the "Free Episodes" sidebar section
+  // NOTE: isPreview is used only for Telegram broadcasting, NOT for website access
   const previewEpisodes: any[] = enrichedSeasons.flatMap((s: any) =>
-    s.episodes.filter((e: any) => e.isPreview)
+    s.episodes.filter((e: any) => e.price === "0")
   );
 
   const formatDuration = (sec: number) => {
@@ -712,13 +713,13 @@ export default function CourseDetailPage() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                                  {seasonLocked && !ep.isPreview
+                                  {seasonLocked && ep.price !== "0"
                                     ? <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                     : <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                   }
                                   {ep.title}
-                                  {ep.isPreview && (
-                                    <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 rounded px-1.5 py-0.5 font-medium">Preview</span>
+                                  {ep.price === "0" && !ep.isUnlocked && (
+                                    <span className="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 rounded px-1.5 py-0.5 font-medium">Free</span>
                                   )}
                                 </p>
                                 <p className="text-xs text-muted-foreground pl-4">
@@ -727,11 +728,11 @@ export default function CourseDetailPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                              {isFree || ep.isUnlocked || ep.isPreview ? (
-                                <Link href={ep.isPreview && !ep.isUnlocked ? `/video/${ep.id}` : `/dashboard/course/${course.id}/episode/${ep.id}`}>
+                              {isFree || ep.isUnlocked || ep.price === "0" ? (
+                                <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
                                   <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1" data-testid={`watch-ep-${ep.id}`}>
                                     <Play className="w-3 h-3 fill-current" />
-                                    {ep.isPreview && !ep.isUnlocked ? "Preview" : "Watch"}
+                                    {ep.price === "0" && !ep.isUnlocked ? "Watch Free" : "Watch"}
                                   </Button>
                                 </Link>
                               ) : ep.isPending ? (
