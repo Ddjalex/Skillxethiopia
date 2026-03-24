@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import { useNotifications } from "@/hooks/use-notifications";
 
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -20,6 +21,11 @@ import VideoOnly from "@/pages/video-only";
 import VerifyEmailPage from "@/pages/verify-email";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+
+function NotificationListener() {
+  useNotifications();
+  return null;
+}
 
 function Router() {
   return (
@@ -53,6 +59,7 @@ function App() {
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
+          <NotificationListener />
           <Router />
         </TooltipProvider>
       </AuthProvider>

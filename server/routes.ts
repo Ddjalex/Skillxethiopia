@@ -23,6 +23,19 @@ import fs from "fs";
 import express from "express";
 import crypto from "crypto";
 
+// --- SSE Real-Time Client Registry ---
+// Maps userId -> SSE response object so we can push events to specific users
+const sseClients = new Map<number, Set<any>>();
+
+function pushToUser(userId: number, event: object) {
+  const connections = sseClients.get(userId);
+  if (!connections) return;
+  const payload = `data: ${JSON.stringify(event)}\n\n`;
+  for (const res of connections) {
+    try { res.write(payload); } catch (_) { /* ignore closed */ }
+  }
+}
+
 // --- Brevo Email ---
 async function sendBrevoEmail(to: string, toName: string, subject: string, htmlContent: string): Promise<void> {
   const apiKey = await storage.getSetting("BREVO_API_KEY") || process.env.BREVO_API_KEY;
@@ -430,6 +443,31 @@ export async function registerRoutes(
     if (!req.isAuthenticated() || req.user.role !== "ADMIN") return res.status(403).json({ message: "Forbidden" });
     next();
   };
+
+  // --- SSE Endpoint: real-time push to logged-in students ---
+  app.get("/api/notifications/stream", requireAuth, (req: any, res: any) => {
+    const userId = (req.user as any).id;
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // for nginx proxies
+    res.flushHeaders();
+
+    // Keep-alive ping every 25 s
+    const ping = setInterval(() => {
+      try { res.write(": ping\n\n"); } catch (_) { clearInterval(ping); }
+    }, 25000);
+
+    // Register this connection
+    if (!sseClients.has(userId)) sseClients.set(userId, new Set());
+    sseClients.get(userId)!.add(res);
+
+    req.on("close", () => {
+      clearInterval(ping);
+      sseClients.get(userId)?.delete(res);
+      if (sseClients.get(userId)?.size === 0) sseClients.delete(userId);
+    });
+  });
 
   // --- Enrollment Notification Helpers ---
   async function getVerifiedStudents() {
@@ -1310,6 +1348,30 @@ export async function registerRoutes(
       itemType: purchase.itemType,
       itemId: purchase.itemId,
       grantedBy: "ADMIN"
+    });
+
+    // Resolve the courseId for the SSE event so the frontend knows which course to unlock
+    let courseId: number | null = null;
+    if (purchase.itemType === "COURSE") {
+      courseId = purchase.itemId;
+    } else if (purchase.itemType === "SEASON") {
+      const [season] = await db.select({ courseId: seasons.courseId }).from(seasons).where(eq(seasons.id, purchase.itemId)).limit(1);
+      courseId = season?.courseId ?? null;
+    } else if (purchase.itemType === "EPISODE") {
+      const [ep] = await db.select({ seasonId: episodes.seasonId }).from(episodes).where(eq(episodes.id, purchase.itemId)).limit(1);
+      if (ep) {
+        const [season] = await db.select({ courseId: seasons.courseId }).from(seasons).where(eq(seasons.id, ep.seasonId)).limit(1);
+        courseId = season?.courseId ?? null;
+      }
+    }
+
+    // Push real-time notification to the student
+    pushToUser(purchase.userId, {
+      type: "payment_approved",
+      purchaseId: purchase.id,
+      itemType: purchase.itemType,
+      itemId: purchase.itemId,
+      courseId,
     });
 
     res.json({ success: true });
