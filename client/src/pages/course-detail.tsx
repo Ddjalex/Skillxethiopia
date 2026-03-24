@@ -712,11 +712,14 @@ export default function CourseDetailPage() {
                               </div>
                               <div className="min-w-0">
                                 <p className="text-sm font-medium truncate flex items-center gap-1.5">
-                                  {seasonLocked
+                                  {seasonLocked && !ep.isPreview
                                     ? <Lock className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                     : <Play className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                                   }
                                   {ep.title}
+                                  {ep.isPreview && (
+                                    <span className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 rounded px-1.5 py-0.5 font-medium">Preview</span>
+                                  )}
                                 </p>
                                 <p className="text-xs text-muted-foreground pl-4">
                                   {ep.durationSec >= 60 ? `${Math.floor(ep.durationSec / 60)} min` : `${ep.durationSec} sec`}
@@ -724,11 +727,11 @@ export default function CourseDetailPage() {
                               </div>
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                              {isFree || ep.isUnlocked ? (
-                                <Link href={`/dashboard/course/${course.id}/episode/${ep.id}`}>
+                              {isFree || ep.isUnlocked || ep.isPreview ? (
+                                <Link href={ep.isPreview && !ep.isUnlocked ? `/video/${ep.id}` : `/dashboard/course/${course.id}/episode/${ep.id}`}>
                                   <Button size="sm" variant="ghost" className="h-7 text-xs text-primary hover:text-primary gap-1" data-testid={`watch-ep-${ep.id}`}>
                                     <Play className="w-3 h-3 fill-current" />
-                                    Watch
+                                    {ep.isPreview && !ep.isUnlocked ? "Preview" : "Watch"}
                                   </Button>
                                 </Link>
                               ) : ep.isPending ? (

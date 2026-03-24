@@ -787,7 +787,7 @@ export async function registerRoutes(
         isPending: seasonPending.length > 0,
         episodes: await Promise.all(eps.map(async e => {
           // Check if individual episode is unlocked (either via season or directly)
-          let isEpisodeUnlocked = isSeasonUnlocked;
+          let isEpisodeUnlocked = isSeasonUnlocked || e.isPreview;
           let isEpisodePending = false;
           
           if (!isEpisodeUnlocked) {
@@ -903,7 +903,12 @@ export async function registerRoutes(
     const episode = await storage.getEpisode(episodeId);
     if (!episode) return res.status(404).json({ message: "Not found" });
 
-    // All episodes require authentication — no free access regardless of preview flag
+    // Preview episodes are freely accessible without login or purchase
+    if (episode.isPreview) {
+      return res.json({ videoProvider: episode.videoProvider, videoRef: episode.videoRef });
+    }
+
+    // All other episodes require authentication
     if (!req.isAuthenticated()) {
       return res.status(401).json({ message: "Unauthorized" });
     }
